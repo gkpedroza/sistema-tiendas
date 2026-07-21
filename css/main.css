@@ -1004,6 +1004,18 @@ html, body { overflow-x: hidden; }
 
 /* toasts del login: sin dock visible bajan al borde */
 body:has(#dock.hidden) .toast-stack { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+
+/* ===== navegación fluida tipo app (20-jul) ===== */
+
+/* repintados en sitio (filtros, guardados, ecos realtime): nada de animar desde cero */
+#view.sin-anim .view { animation: none; }
+
+/* transición nativa entre secciones: crossfade corto y con leve deslizamiento */
+::view-transition-old(root) { animation-duration: 140ms; }
+::view-transition-new(root) { animation-duration: 200ms; animation-timing-function: cubic-bezier(0.32, 0.72, 0.35, 1); }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
 table.mini td.num, table.mini th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ---------- Responsive ---------- */

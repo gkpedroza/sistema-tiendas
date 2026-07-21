@@ -145,6 +145,20 @@ window.App = window.App || {};
   }
 
   /* ---------- router ---------- */
+  function montarVista(m, sinAnim, conservarScroll) {
+    App.chart.limpiar();
+    // reemplazar el nodo de la vista mata los listeners delegados del módulo
+    // anterior; si no, se acumulan y un click abre N sheets apilados
+    var viejo = App.$("#view");
+    var view = document.createElement("div");
+    view.id = "view";
+    var scrollY = conservarScroll ? (window.scrollY || window.pageYOffset || 0) : 0;
+    if (sinAnim) view.className = "sin-anim";
+    viejo.replaceWith(view);
+    m.render(view);
+    marcarActivos();
+    window.scrollTo(0, scrollY);
+  }
   function rutear() {
     if (App.cerrarSheets) App.cerrarSheets(); // navegar cierra cualquier sheet abierto
     var id = (location.hash || "#/dashboard").replace(/^#\//, "") || "dashboard";
@@ -153,17 +167,16 @@ window.App = window.App || {};
       if (id !== "dashboard") { location.hash = "#/dashboard"; return; }
       m = App.modDashboard;
     }
+    var mismaVista = rutaActual === m.id;
     rutaActual = m.id;
-    App.chart.limpiar();
-    // reemplazar el nodo de la vista mata los listeners delegados del módulo
-    // anterior; si no, se acumulan y un click abre N sheets apilados
-    var viejo = App.$("#view");
-    var view = document.createElement("div");
-    view.id = "view";
-    viejo.replaceWith(view);
-    m.render(view);
-    marcarActivos();
-    window.scrollTo(0, 0);
+    /* repintado de la misma vista (filtros, guardados, ecos): sin animación ni salto de scroll */
+    if (mismaVista) { montarVista(m, true, true); return; }
+    /* cambio de sección: transición nativa tipo app (crossfade); fallback = animación CSS */
+    if (document.startViewTransition) {
+      document.startViewTransition(function () { montarVista(m, true, false); });
+    } else {
+      montarVista(m, false, false);
+    }
   }
   App.render = function () { rutear(); };
 
