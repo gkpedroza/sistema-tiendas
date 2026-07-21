@@ -39,18 +39,27 @@ window.App = window.App || {};
     },
     logout: function () {
       if (App.MODO_NUBE && App.sb) {
-        /* con Face ID activo, "salir" ofrece bloquear (como las apps de banco) o salir del todo */
+        /* con Face ID activo, "salir" ofrece tres niveles (como las apps de banco) */
         if (App.bioActivo && App.bioActivo() && App.auth.user) {
           var s = App.sheet({
             titulo: "¿Cómo quieres salir?",
             cuerpo: '<div class="list">' +
               '<div class="row-item" data-op-bloquear><div class="thumb">🔒</div><div class="row-main">' +
-              '<div class="row-title">Bloquear la app</div><div class="row-sub">Para volver: Face ID / huella, sin contraseña</div></div></div>' +
-              '<div class="row-item" data-op-salir><div class="thumb">🚪</div><div class="row-main">' +
-              '<div class="row-title">Cerrar sesión del todo</div><div class="row-sub">Pedirá email y contraseña otra vez</div></div></div></div>'
+              '<div class="row-title">Bloquear la app</div><div class="row-sub">Para volver: Face ID / huella</div></div></div>' +
+              '<div class="row-item" data-op-salir-bio><div class="thumb">🚪</div><div class="row-main">' +
+              '<div class="row-title">Salir</div><div class="row-sub">El login tendrá el botón de Face ID (o contraseña)</div></div></div>' +
+              '<div class="row-item" data-op-salir-todo><div class="thumb">🧹</div><div class="row-main">' +
+              '<div class="row-title">Cerrar sesión del todo</div><div class="row-sub">Borra el acceso rápido; pedirá email y contraseña</div></div></div></div>'
           });
           App.$("[data-op-bloquear]", s.el).addEventListener("click", function () { s.cerrar(); App.bloquearApp(); });
-          App.$("[data-op-salir]", s.el).addEventListener("click", function () { s.cerrar(); salirNube(); });
+          App.$("[data-op-salir-bio]", s.el).addEventListener("click", function () {
+            s.cerrar();
+            App.sb.auth.getSession().then(function (r) {
+              App.guardarSesionBio(r.data ? r.data.session : null);
+              App.sb.auth.signOut({ scope: "local" }).then(function () { location.reload(); }, function () { location.reload(); });
+            });
+          });
+          App.$("[data-op-salir-todo]", s.el).addEventListener("click", function () { s.cerrar(); salirNube(); });
           return;
         }
         salirNube();
@@ -75,6 +84,7 @@ window.App = window.App || {};
 
     /* ---- login REAL (Supabase Auth) cuando hay conexión configurada ---- */
     if (App.MODO_NUBE) {
+      var puedeBio = App.bioActivo && App.bioActivo() && App.haySesionBio();
       root.innerHTML =
         '<div class="login-card view">' +
         '<div class="logo-mark">🧸</div>' +
@@ -85,8 +95,19 @@ window.App = window.App || {};
         '<div class="field"><label>Contraseña</label><input class="input" name="clave" type="password" autocomplete="current-password" required></div>' +
         '<button class="btn primary block" type="submit" id="btn-entrar-nube">Entrar</button>' +
         "</form>" +
+        (puedeBio ? '<button class="btn block" id="btn-login-bio" style="margin-top:10px">' + App.icon("faceid") + " Entrar con Face ID / huella</button>" : "") +
         '<div class="login-alt"><button class="btn ghost block" id="btn-olvide">¿Olvidaste tu contraseña?</button></div>' +
         "</div>";
+
+      if (puedeBio) App.$("#btn-login-bio").addEventListener("click", function () {
+        var b = App.$("#btn-login-bio");
+        App.pedirBiometria().then(function () {
+          b.disabled = true; b.textContent = "Entrando…";
+          App.entrarConSesionBio(function () {
+            b.disabled = false; b.textContent = "Entrar con Face ID / huella";
+          });
+        }, function () { App.toast("No se pudo verificar — intenta de nuevo", "err"); });
+      });
 
       App.$("#f-login-nube").addEventListener("submit", function (e) {
         e.preventDefault();
@@ -100,6 +121,7 @@ window.App = window.App || {};
             return;
           }
           function continuar() {
+            App.guardarSesionBio(r.data.session);
             App.iniciarNube(r.data.session).then(function () { App.iniciarApp(); }, function (e2) {
               btn.disabled = false; btn.textContent = "Entrar";
               App.toast(e2 && e2.sinPerfil ? e2.message : "Entraste, pero no se pudieron cargar los datos. Revisa la conexión y reintenta.", "err");
@@ -197,11 +219,50 @@ window.App = window.App || {};
     });
   }
 
-  /* salir de verdad: limpiar el caché del negocio y cerrar la sesión del servidor */
+  /* salir de verdad: limpiar el caché del negocio, el acceso rápido y la sesión del servidor */
   function salirNube() {
     try { localStorage.removeItem("ljt_cache_nube"); localStorage.removeItem("ljt_sync_pend"); } catch (e) { }
+    if (App.borrarSesionBio) App.borrarSesionBio();
     App.sb.auth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
   }
+
+  /* "sesión biométrica": copia de la sesión que solo se usa tras pasar el Face ID.
+     Es lo que enciende el botón "Entrar con Face ID / huella" del login. */
+  App.guardarSesionBio = function (session) {
+    if (!App.bioActivo() || !session) return;
+    try {
+      localStorage.setItem("ljt_bio_ses", JSON.stringify({ access_token: session.access_token, refresh_token: session.refresh_token }));
+    } catch (e) { }
+  };
+  App.haySesionBio = function () {
+    try { return !!localStorage.getItem("ljt_bio_ses"); } catch (e) { return false; }
+  };
+  App.borrarSesionBio = function () {
+    try { localStorage.removeItem("ljt_bio_ses"); } catch (e) { }
+  };
+  App.entrarConSesionBio = function (alFallar) {
+    var ses = null;
+    try { ses = JSON.parse(localStorage.getItem("ljt_bio_ses")); } catch (e) { }
+    if (!ses) {
+      App.toast("No hay acceso guardado — entra con tu contraseña", "err");
+      if (alFallar) alFallar();
+      return;
+    }
+    App.sb.auth.setSession(ses).then(function (r) {
+      if (r.error || !r.data || !r.data.session) {
+        App.borrarSesionBio();
+        App.toast("El acceso guardado venció — entra con tu contraseña", "err");
+        if (alFallar) alFallar();
+        App.renderLogin();
+        return;
+      }
+      App.guardarSesionBio(r.data.session);
+      App.iniciarNube(r.data.session).then(function () { App.iniciarApp(); }, function (e2) {
+        App.toast(e2 && e2.sinPerfil ? e2.message : "No se pudieron cargar los datos — revisa tu internet", "err");
+        if (alFallar) alFallar();
+      });
+    });
+  };
 
   /* Face ID como SEGUNDO PASO del login con contraseña (si está activo en este dispositivo) */
   App.exigirBioSiActivo = function (alOk, alFallar) {
@@ -228,6 +289,9 @@ window.App = window.App || {};
 
   /* bloquear la app a mano (la sesión sigue viva; se desbloquea con biometría) */
   App.bloquearApp = function () {
+    if (App.sb) App.sb.auth.getSession().then(function (r) {
+      if (App.guardarSesionBio) App.guardarSesionBio(r.data ? r.data.session : null);
+    });
     App.$("#app").classList.add("hidden");
     App.$("#dock").classList.add("hidden");
     App.renderBloqueo(function () {
@@ -300,12 +364,17 @@ window.App = window.App || {};
         var b = new Uint8Array(cred.rawId), str = "";
         for (var i = 0; i < b.length; i++) str += String.fromCharCode(b[i]);
         localStorage.setItem("ljt_bio_id", btoa(str));
+        /* guarda el acceso rápido de una vez: el botón del login queda disponible */
+        if (App.sb) App.sb.auth.getSession().then(function (r) {
+          if (App.guardarSesionBio) App.guardarSesionBio(r.data ? r.data.session : null);
+        });
         resolve();
       }, reject);
     });
   };
   App.desactivarBiometria = function () {
     try { localStorage.removeItem("ljt_bio_id"); } catch (e) { }
+    if (App.borrarSesionBio) App.borrarSesionBio();
   };
   App.pedirBiometria = function () {
     return new Promise(function (resolve, reject) {
