@@ -13,6 +13,41 @@ window.App = window.App || {};
     ["finanzas", "Finanzas"], ["calendario", "Calendario"], ["ajustes", "Ajustes"]
   ];
 
+  /* 2FA real: alta del autenticador (QR de Supabase) + verificación del primer código */
+  function activar2FA() {
+    App.sb.auth.mfa.enroll({ factorType: "totp", friendlyName: "Sistema Tiendas" }).then(function (r) {
+      if (r.error) { App.toast(r.error.message, "err"); return; }
+      var f = r.data;
+      var verificado = false;
+      var s = App.sheet({
+        titulo: "🔐 Activar 2FA",
+        cuerpo: '<p class="small muted">1) Abre <b>Google Authenticator</b> (o 1Password / Authy) y escanea este código:</p>' +
+          '<img src="' + f.totp.qr_code + '" alt="QR" style="width:190px;margin:10px auto;display:block;background:#fff;padding:10px;border-radius:14px">' +
+          '<div class="small muted" style="text-align:center;word-break:break-all">clave manual: <span class="num">' + App.esc(f.totp.secret) + "</span></div>" +
+          '<div class="field" style="margin-top:12px"><label>2) Escribe el código de 6 dígitos que te muestra la app</label>' +
+          '<input class="input num" id="fa-cod" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>',
+        pie: '<button class="btn primary" data-ok>Verificar y activar</button>',
+        alCerrar: function () {
+          if (!verificado) App.sb.auth.mfa.unenroll({ factorId: f.id });
+        }
+      });
+      App.$("[data-ok]", s.foot).addEventListener("click", function () {
+        var code = App.$("#fa-cod", s.el).value.trim();
+        if (code.length !== 6) { App.toast("El código tiene 6 dígitos", "err"); return; }
+        App.sb.auth.mfa.challenge({ factorId: f.id }).then(function (rc) {
+          if (rc.error) { App.toast(rc.error.message, "err"); return; }
+          App.sb.auth.mfa.verify({ factorId: f.id, challengeId: rc.data.id, code: code }).then(function (rv) {
+            if (rv.error) { App.toast("Código incorrecto — prueba con el siguiente que aparezca", "err"); return; }
+            verificado = true;
+            App.toast("2FA activada 🔐");
+            s.cerrar();
+            App.render();
+          });
+        });
+      });
+    });
+  }
+
   App.modAjustes = {
     id: "ajustes", titulo: "Ajustes", icono: "ajustes",
     render: function (el) {
@@ -36,14 +71,19 @@ window.App = window.App || {};
       html += '<div class="card section-gap"><div class="card-head"><h2>🔐 Seguridad</h2></div><div class="list">' +
         (App.MODO_NUBE
           ? '<div class="row-item static"><div class="thumb">☁️</div><div class="row-main"><div class="row-title">Login real con servidor</div>' +
-          '<div class="row-sub">Cuentas y contraseñas protegidas en Supabase · 2FA TOTP llega en la fase 2.2</div></div><span class="pill ok">✓</span></div>'
+          '<div class="row-sub">Cuentas y contraseñas protegidas en Supabase</div></div><span class="pill ok">✓</span></div>' +
+          '<div class="row-item static" id="fila-2fa"><div class="thumb">🔐</div><div class="row-main"><div class="row-title">Verificación en dos pasos (2FA)</div>' +
+          '<div class="row-sub" id="txt-2fa">Comprobando…</div></div><button class="btn sm ghost" id="btn-2fa" disabled>…</button></div>' +
+          '<div class="row-item static"><div class="thumb">🪪</div><div class="row-main"><div class="row-title">Face ID / huella al abrir</div>' +
+          '<div class="row-sub">Bloquea la app en este dispositivo; se desbloquea con tu cara o huella</div></div>' +
+          '<button class="btn sm ghost" id="btn-bio-toggle">' + (App.bioActivo && App.bioActivo() ? "Desactivar" : "Activar") + "</button></div>"
           : '<div class="row-item static"><div class="thumb">🔐</div><div class="row-main"><div class="row-title">Verificación en dos pasos</div>' +
-          '<div class="row-sub">Activada (demo: código 246810)</div></div><span class="pill ok">✓</span></div>') +
+          '<div class="row-sub">Activada (demo: código 246810)</div></div><span class="pill ok">✓</span></div>' +
+          '<div class="row-item static"><div class="thumb">👤</div><div class="row-main"><div class="row-title">Face ID / huella</div>' +
+          '<div class="row-sub">Disponible en la versión online (passkeys)</div></div><span class="pill">Fase 2</span></div>') +
         (esSuper ? '<div class="row-item static"><div class="thumb">🔒</div><div class="row-main"><div class="row-title">Candado de precios</div>' +
           '<div class="row-sub">Los vendedores no pueden modificar precios al vender (tú sí)</div></div>' +
           '<span class="switch"><input type="checkbox" id="aj-lock-precio"' + (s.bloquearPrecioVendedor !== false ? " checked" : "") + "><i></i></span></div>" : "") +
-        '<div class="row-item static"><div class="thumb">👤</div><div class="row-main"><div class="row-title">Face ID / huella</div>' +
-        '<div class="row-sub">Disponible en la versión online (passkeys)</div></div><span class="pill">Fase 2</span></div>' +
         "</div>" +
         '<div class="flex" style="gap:8px;margin-top:10px">' +
         (App.MODO_NUBE ? "" : '<button class="btn sm ghost" id="aj-reset2fa">Restablecer 2FA</button>') +
@@ -168,6 +208,49 @@ window.App = window.App || {};
         });
       });
       App.$("#aj-logout").addEventListener("click", App.auth.logout);
+
+      /* 2FA real + Face ID (solo nube) */
+      if (App.MODO_NUBE && App.sb) {
+        App.sb.auth.mfa.listFactors().then(function (r) {
+          var tot = ((r.data && r.data.totp) || []).filter(function (f) { return f.status === "verified"; })[0];
+          var txt = App.$("#txt-2fa"), btn = App.$("#btn-2fa");
+          if (!txt || !btn) return;
+          btn.disabled = false;
+          if (tot) {
+            txt.textContent = "Activada ✓ — se pide el código al iniciar sesión";
+            btn.textContent = "Desactivar";
+            btn.onclick = function () {
+              App.confirmar("¿Desactivar la verificación en dos pasos?", { peligro: true, accion: "Desactivar" }).then(function (si) {
+                if (!si) return;
+                App.sb.auth.mfa.unenroll({ factorId: tot.id }).then(function (ru) {
+                  if (ru.error) App.toast(ru.error.message, "err");
+                  else { App.toast("2FA desactivada"); App.render(); }
+                });
+              });
+            };
+          } else {
+            txt.textContent = "Desactivada — actívala con Google Authenticator o similar";
+            btn.textContent = "Activar";
+            btn.onclick = activar2FA;
+          }
+        });
+        var bBio = App.$("#btn-bio-toggle");
+        if (bBio) bBio.addEventListener("click", function () {
+          if (App.bioActivo()) {
+            App.desactivarBiometria();
+            App.toast("Face ID desactivado en este dispositivo");
+            App.render();
+          } else {
+            App.activarBiometria().then(function () {
+              App.toast("Face ID/huella activado 🔒 — se pedirá al abrir la app");
+              App.render();
+            }, function () {
+              App.toast("No se pudo activar: el dispositivo debe tener Face ID o huella configurado", "err");
+            });
+          }
+        });
+      }
+
       var bn = App.$("#aj-notif");
       if (bn) bn.addEventListener("click", App.pedirPermisoNotif);
       var lockP = App.$("#aj-lock-precio");

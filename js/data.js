@@ -1309,9 +1309,11 @@ window.App = window.App || {};
     var db = dbVacio();
     var q = [];
     q.push(sb.from("settings").select("data").eq("id", 1).single().then(function (r) {
+      if (r.error) throw r.error;
       if (r.data && r.data.data) db.settings = r.data.data;
     }));
     q.push(sb.from("perfiles").select("*").then(function (r) {
+      if (r.error) throw r.error;
       db.usuarios = (r.data || []).map(function (p) {
         return { id: p.id, nombre: p.nombre, emoji: p.emoji, rol: p.rol, permisos: p.permisos, comision: +p.comision || 0, email: "", clave: null };
       });
@@ -1374,12 +1376,26 @@ window.App = window.App || {};
     } catch (e) { }
   };
 
-  /* arranque de sesión en nube: perfil + datos + realtime */
+  /* arranque de sesión en nube: perfil (consulta directa, errores visibles) + datos + realtime */
   App.iniciarNube = function (session) {
-    return App.cargarNube().then(function () {
-      var uid = session.user.id;
+    var uid = session.user.id;
+    var perfilDirecto = null;
+    return sb.from("perfiles").select("*").eq("id", uid).maybeSingle().then(function (rp) {
+      if (rp.error) throw rp.error;
+      perfilDirecto = rp.data;
+      return App.cargarNube();
+    }).then(function () {
       var perfil = (App.db.usuarios || []).filter(function (u) { return u.id === uid; })[0];
-      App.auth.user = perfil || { id: uid, nombre: session.user.email || "Usuario", rol: "vendedor", permisos: [], emoji: "🧑‍💼", comision: 0 };
+      if (!perfil && perfilDirecto) {
+        perfil = { id: perfilDirecto.id, nombre: perfilDirecto.nombre, emoji: perfilDirecto.emoji, rol: perfilDirecto.rol, permisos: perfilDirecto.permisos, comision: +perfilDirecto.comision || 0, email: "", clave: null };
+        App.db.usuarios.push(perfil);
+      }
+      if (!perfil) {
+        var err = new Error("Tu cuenta no tiene perfil asignado — avísale a Manuel");
+        err.sinPerfil = true;
+        throw err;
+      }
+      App.auth.user = perfil;
       App.auth.user.email = session.user.email || "";
       App.suscribirNube();
       var pend = false;

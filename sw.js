@@ -1,6 +1,6 @@
 /* Service worker — estrategia network-first:
    online siempre sirve lo más fresco; sin conexión, sirve la última copia en caché. */
-var CACHE = "lt-vzla-v1";
+var CACHE = "lt-vzla-v2";
 
 self.addEventListener("install", function () {
   self.skipWaiting();

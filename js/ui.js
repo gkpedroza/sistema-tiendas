@@ -124,7 +124,17 @@ window.App = window.App || {};
     }, 2600);
   };
 
-  /* ---------- sheet (móvil: bottom sheet con gesto / desktop: modal) ---------- */
+  /* ---------- sheet (móvil: bottom sheet con gesto / desktop: modal) ----------
+     Integrado con el historial: el botón "atrás" del celular cierra el sheet
+     abierto (como cualquier app moderna) en vez de salir de la página. */
+  var pilaSheets = [];
+  var popIgnorar = 0;
+  window.addEventListener("popstate", function () {
+    if (popIgnorar > 0) { popIgnorar--; return; }
+    var top = pilaSheets[pilaSheets.length - 1];
+    if (top) top._cerrarPorPop();
+  });
+
   App.sheet = function (opts) {
     var bd = document.createElement("div");
     bd.className = "sheet-backdrop";
@@ -147,13 +157,22 @@ window.App = window.App || {};
     document.body.style.overflow = "hidden";
     requestAnimationFrame(function () { requestAnimationFrame(function () { bd.classList.add("open"); }); });
 
+    var api = null;
+    var enHistoria = false;
+    try { history.pushState({ ljtSheet: true }, ""); enHistoria = true; } catch (eH) { }
+
     var cerrado = false;
-    function cerrar(res) {
+    function cerrar(res, porPop) {
       if (cerrado) return; cerrado = true;
+      pilaSheets = pilaSheets.filter(function (x) { return x !== api; });
       bd.classList.add("closing"); bd.classList.remove("open");
       document.body.style.overflow = "";
       setTimeout(function () { bd.remove(); }, 380);
       if (opts.alCerrar) opts.alCerrar(res);
+      if (enHistoria && !porPop) {
+        popIgnorar++;
+        try { history.back(); } catch (eB) { popIgnorar--; }
+      }
     }
     bd.addEventListener("click", function (e) { if (e.target === bd) cerrar(); });
     /* iOS: evita que arrastrar sobre el fondo oscuro scrollee la página de atrás */
@@ -195,7 +214,10 @@ window.App = window.App || {};
       });
     })();
 
-    return { el: bd, body: body, foot: foot, cerrar: cerrar };
+    api = { el: bd, body: body, foot: foot, cerrar: cerrar };
+    api._cerrarPorPop = function () { cerrar(undefined, true); };
+    pilaSheets.push(api);
+    return api;
   };
 
   App.confirmar = function (msg, opciones) {

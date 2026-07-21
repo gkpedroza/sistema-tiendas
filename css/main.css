@@ -1037,6 +1037,15 @@ body::before { transform: translateZ(0); } /* la aurora vive en su propia capa *
   .sheet-backdrop { -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
 }
 
+/* pie del sidebar: el email largo no debe montar los botones de tema/salir */
+.side-user { flex-wrap: nowrap; }
+.side-user .btn.icon { flex: 0 0 auto; }
+.side-user-name, .side-user-rol {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ===== fixes de la auditoría móvil (19-jul) ===== */
 .seg { min-width: 0; overflow-x: auto; }          /* red de seguridad: seg largo scrollea, no desborda */
 .sheet-foot { flex-wrap: wrap; }                  /* 4 botones en el pie del sheet caben a 360px */

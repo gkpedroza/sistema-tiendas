@@ -244,10 +244,14 @@ window.App = window.App || {};
       App.sb.auth.getSession().then(function (r) {
         var ses = r.data ? r.data.session : null;
         if (!ses) { App.renderLogin(); return; }
-        App.iniciarNube(ses).then(function () { App.iniciarApp(); }, function () {
-          App.toast("No se pudo conectar con el servidor — revisa tu internet y recarga", "err");
-          App.renderLogin();
-        });
+        function arrancar() {
+          App.iniciarNube(ses).then(function () { App.iniciarApp(); }, function (e2) {
+            App.toast(e2 && e2.sinPerfil ? e2.message : "No se pudo conectar con el servidor — revisa tu internet y recarga", "err");
+            App.renderLogin();
+          });
+        }
+        if (App.bioActivo && App.bioActivo()) App.renderBloqueo(arrancar);
+        else arrancar();
       });
       return;
     }
