@@ -74,7 +74,6 @@ window.App = window.App || {};
         '<button class="btn primary block" type="submit" id="btn-entrar-nube">Entrar</button>' +
         "</form>" +
         '<div class="login-alt"><button class="btn ghost block" id="btn-olvide">¿Olvidaste tu contraseña?</button></div>' +
-        '<div class="login-hint">☁️ Conectado al servidor — tus datos se sincronizan entre todos tus dispositivos.</div>' +
         "</div>";
 
       App.$("#f-login-nube").addEventListener("submit", function (e) {

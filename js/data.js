@@ -496,11 +496,9 @@ window.App = window.App || {};
     var out = { usd: null, eur: null };
     var p1 = fetch("https://ve.dolarapi.com/v1/dolares/oficial").then(function (r) { return r.json(); })
       .then(function (j) { if (j && j.promedio) out.usd = Math.round(j.promedio * 100) / 100; }).catch(function () { });
-    var p2 = fetch("https://pydolarve.org/api/v2/tipo-cambio?currency=eur").then(function (r) { return r.json(); })
-      .then(function (j) {
-        var v = j && (j.price || (j.monitors && j.monitors.bcv && j.monitors.bcv.price));
-        if (v) out.eur = Math.round(parseFloat(v) * 100) / 100;
-      }).catch(function () { });
+    /* misma fuente que el dólar (espejo del BCV oficial, tasa vigente del día) */
+    var p2 = fetch("https://ve.dolarapi.com/v1/euros/oficial").then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.promedio) out.eur = Math.round(j.promedio * 100) / 100; }).catch(function () { });
     return Promise.all([p1, p2]).then(function () {
       if (out.usd || out.eur) {
         var t = App.db.settings.tasas;

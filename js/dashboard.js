@@ -220,20 +220,22 @@ window.App = window.App || {};
       cardTop += "</div>";
       colDer += cardTop;
 
-      /* tasa + caja Bs (solo súper) */
+      /* tasa + caja Bs (solo súper) — SIEMPRE arriba de las columnas: es lo primero del día */
       if (App.auth.esSuper()) {
         var caja = C.cajaBs();
         var tasas = C.tasaHoy();
-        colIzq += '<div class="card lift" data-ir="finanzas" style="cursor:pointer"><div class="card-head"><h2>💱 Tasa del día</h2><span class="pill tint">BCV</span></div>' +
+        var cardTasa = '<div class="card lift" data-ir="finanzas" style="cursor:pointer"><div class="card-head"><h2>💱 Tasa del día</h2><span class="pill tint">BCV</span></div>' +
           '<div class="flex wrap" style="gap:18px">' +
           '<div><div class="eyebrow">Euro (cobras con esta)</div><div class="kpi-value num" style="font-size:clamp(18px,6vw,24px)">' + App.fmt.num(tasas.eur) + " Bs</div></div>" +
           '<div><div class="eyebrow">Dólar</div><div class="kpi-value num" style="font-size:clamp(18px,6vw,24px)">' + App.fmt.num(tasas.usd) + " Bs</div></div></div>" +
           '<div class="chart-note">Actualizada: ' + App.fmt.fechaRel(tasas.fecha) + " · toca para gestionar</div></div>";
-        colDer += '<div class="card lift" data-ir="finanzas" style="cursor:pointer"><div class="card-head"><h2>🇻🇪 Caja en bolívares</h2></div>' +
+        var cardCaja = '<div class="card lift" data-ir="finanzas" style="cursor:pointer"><div class="card-head"><h2>🇻🇪 Caja en bolívares</h2></div>' +
           '<div class="kpi-value num" style="font-size:clamp(18px,6vw,24px)">' + App.fmt.bs(caja.saldoBs) + "</div>" +
           '<div class="kpi-foot"><span>≈ ' + App.fmt.usd(caja.valorHoyUsd) + " hoy</span>" +
           (caja.perdidaUsd > 0.5 ? '<span class="stat-delta down">▼ ' + App.fmt.usd(caja.perdidaUsd) + " por devaluación</span>" : "") +
           "</div></div>";
+        colIzq = cardTasa + colIzq;
+        colDer = cardCaja + colDer;
       }
 
       html += '<div class="dash-cols section-gap"><div class="dash-col">' + colIzq + '</div><div class="dash-col">' + colDer + "</div></div>";
