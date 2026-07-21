@@ -231,7 +231,9 @@ window.App = window.App || {};
           rp: { name: "La Teacher · En Vzla" },
           user: { id: uid, name: App.auth.user.email || App.auth.user.nombre || "usuario", displayName: App.auth.user.nombre || "Usuario" },
           pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
-          authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred" },
+          /* sin authenticatorAttachment: el navegador ofrece TODAS las opciones
+             (Face ID/huella/PIN del equipo, o el teléfono escaneando un QR) */
+          authenticatorSelection: { userVerification: "required", residentKey: "preferred" },
           timeout: 60000
         }
       }).then(function (cred) {
