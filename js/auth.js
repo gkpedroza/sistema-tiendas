@@ -105,9 +105,17 @@ window.App = window.App || {};
               App.toast(e2 && e2.sinPerfil ? e2.message : "Entraste, pero no se pudieron cargar los datos. Revisa la conexión y reintenta.", "err");
             });
           }
-          App.verificar2FASiHaceFalta(continuar, function () {
+          function cancelado() {
             btn.disabled = false; btn.textContent = "Entrar";
-          });
+          }
+          /* segundos pasos en cadena: código TOTP (si la cuenta lo activó) y
+             Face ID (si este dispositivo lo tiene activo) — uno, el otro o ambos */
+          App.verificar2FASiHaceFalta(function () {
+            App.exigirBioSiActivo(continuar, function () {
+              cancelado();
+              App.sb.auth.signOut(); /* sin el segundo paso no queda sesión a medias */
+            });
+          }, cancelado);
         });
       });
       App.$("#btn-olvide").addEventListener("click", function () {
@@ -194,6 +202,29 @@ window.App = window.App || {};
     try { localStorage.removeItem("ljt_cache_nube"); localStorage.removeItem("ljt_sync_pend"); } catch (e) { }
     App.sb.auth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
   }
+
+  /* Face ID como SEGUNDO PASO del login con contraseña (si está activo en este dispositivo) */
+  App.exigirBioSiActivo = function (alOk, alFallar) {
+    if (!(App.bioActivo && App.bioActivo())) { alOk(); return; }
+    var pasado = false;
+    var s = App.sheet({
+      titulo: "🪪 Segundo paso: Face ID",
+      cuerpo: '<p class="small muted">Este dispositivo tiene Face ID / huella como segundo paso de verificación. Confírmalo para entrar.</p>' +
+        '<button class="btn primary block" id="bio-2p" style="margin-top:10px">' + App.icon("faceid") + " Confirmar identidad</button>",
+      alCerrar: function () { if (!pasado) alFallar(); }
+    });
+    function intentar(silencioso) {
+      App.pedirBiometria().then(function () {
+        pasado = true;
+        s.cerrar();
+        alOk();
+      }, function () {
+        if (!silencioso) App.toast("No se pudo verificar — intenta de nuevo", "err");
+      });
+    }
+    App.$("#bio-2p", s.el).addEventListener("click", function () { intentar(false); });
+    intentar(true);
+  };
 
   /* bloquear la app a mano (la sesión sigue viva; se desbloquea con biometría) */
   App.bloquearApp = function () {

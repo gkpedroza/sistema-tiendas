@@ -78,8 +78,8 @@ window.App = window.App || {};
           '<div class="row-sub">Cuentas y contraseñas protegidas en Supabase</div></div><span class="pill ok">✓</span></div>' +
           '<div class="row-item static" id="fila-2fa"><div class="thumb">🔐</div><div class="row-main"><div class="row-title">Verificación en dos pasos (2FA)</div>' +
           '<div class="row-sub" id="txt-2fa">Comprobando…</div></div><button class="btn sm ghost" id="btn-2fa" disabled>…</button></div>' +
-          '<div class="row-item static"><div class="thumb">🪪</div><div class="row-main"><div class="row-title">Face ID / huella al abrir</div>' +
-          '<div class="row-sub">Candado de este dispositivo: Face ID, huella o PIN del equipo (o tu teléfono con QR). Actívalo en cada aparato donde uses la app</div></div>' +
+          '<div class="row-item static"><div class="thumb">🪪</div><div class="row-main"><div class="row-title">Face ID / huella</div>' +
+          '<div class="row-sub">En este dispositivo: candado al abrir Y segundo paso obligatorio al entrar con contraseña. Combinable con el 2FA de arriba (uno, el otro o ambos)</div></div>' +
           '<button class="btn sm ghost" id="btn-bio-toggle">' + (App.bioActivo && App.bioActivo() ? "Desactivar" : "Activar") + "</button></div>"
           : '<div class="row-item static"><div class="thumb">🔐</div><div class="row-main"><div class="row-title">Verificación en dos pasos</div>' +
           '<div class="row-sub">Activada (demo: código 246810)</div></div><span class="pill ok">✓</span></div>' +
