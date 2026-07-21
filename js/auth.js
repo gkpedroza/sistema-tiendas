@@ -84,7 +84,7 @@ window.App = window.App || {};
 
     /* ---- login REAL (Supabase Auth) cuando hay conexión configurada ---- */
     if (App.MODO_NUBE) {
-      var puedeBio = App.bioActivo && App.bioActivo() && App.haySesionBio();
+      var puedeBio = App.bioActivo && App.bioActivo();
       root.innerHTML =
         '<div class="login-card view">' +
         '<div class="logo-mark">🧸</div>' +
@@ -244,7 +244,7 @@ window.App = window.App || {};
     var ses = null;
     try { ses = JSON.parse(localStorage.getItem("ljt_bio_ses")); } catch (e) { }
     if (!ses) {
-      App.toast("No hay acceso guardado — entra con tu contraseña", "err");
+      App.toast("Entra con tu contraseña esta vez — el acceso con Face ID quedará listo para la próxima", "err");
       if (alFallar) alFallar();
       return;
     }
