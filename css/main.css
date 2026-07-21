@@ -1005,6 +1005,35 @@ html, body { overflow-x: hidden; }
 /* toasts del login: sin dock visible bajan al borde */
 body:has(#dock.hidden) .toast-stack { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
 
+/* ===== carrusel de fotos (snap + escala, estilo app) ===== */
+.carrusel {
+  display: flex; gap: 10px;
+  overflow-x: auto;
+  padding: 6px 13%;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.carrusel::-webkit-scrollbar { display: none; }
+.carrusel-item {
+  flex: 0 0 80%;
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
+  overflow: hidden;
+  scroll-snap-align: center;
+  will-change: transform, opacity;
+  background: var(--field-bg);
+  box-shadow: 0 10px 28px rgba(20, 20, 40, 0.12);
+}
+.carrusel-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.carrusel-dots { display: flex; gap: 6px; justify-content: center; margin-top: 10px; }
+.carrusel-dot {
+  width: 6px; height: 6px; border-radius: 99px; border: 0; padding: 0;
+  background: var(--ink-3); opacity: 0.35; cursor: pointer;
+  transition: width 0.25s var(--ease), opacity 0.25s var(--ease), background 0.25s var(--ease);
+}
+.carrusel-dot.active { width: 20px; opacity: 1; background: var(--c1); }
+
 /* ===== navegación fluida tipo app (20-jul) ===== */
 
 /* repintados en sitio (filtros, guardados, ecos realtime): nada de animar desde cero */

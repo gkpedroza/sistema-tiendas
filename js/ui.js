@@ -240,6 +240,55 @@ window.App = window.App || {};
     return api;
   };
 
+  /* ---------- carrusel de fotos (snap nativo + escala al centro + dots) ---------- */
+  App.carruselFotos = function (fotos, alturaMax) {
+    if (!fotos || !fotos.length) return "";
+    if (fotos.length === 1) {
+      return '<img src="' + App.esc(fotos[0]) + '" style="width:100%;max-height:' + (alturaMax || 280) + 'px;object-fit:cover;border-radius:16px">';
+    }
+    return '<div class="carrusel-wrap"><div class="carrusel" data-carrusel>' +
+      fotos.map(function (f) {
+        return '<div class="carrusel-item"><img src="' + App.esc(f) + '" alt="" loading="lazy"></div>';
+      }).join("") + "</div>" +
+      '<div class="carrusel-dots">' + fotos.map(function (x, i) {
+        return '<button class="carrusel-dot' + (i === 0 ? " active" : "") + '" data-dot="' + i + '" aria-label="Foto ' + (i + 1) + '"></button>';
+      }).join("") + "</div></div>";
+  };
+  App.carruselInit = function (root) {
+    App.$$("[data-carrusel]", root || document).forEach(function (c) {
+      if (c._carruselListo) return;
+      c._carruselListo = true;
+      var items = App.$$(".carrusel-item", c);
+      var dots = App.$$(".carrusel-dot", c.parentNode);
+      var raf = null;
+      function pintar() {
+        raf = null;
+        var centro = c.scrollLeft + c.clientWidth / 2;
+        var activo = 0, mejor = Infinity;
+        items.forEach(function (it, i) {
+          var m = it.offsetLeft + it.offsetWidth / 2;
+          var d = Math.abs(m - centro);
+          var f = Math.max(0, 1 - d / it.offsetWidth);
+          it.style.transform = "scale(" + (0.9 + 0.1 * f).toFixed(3) + ")";
+          it.style.opacity = (0.55 + 0.45 * f).toFixed(3);
+          if (d < mejor) { mejor = d; activo = i; }
+        });
+        dots.forEach(function (d, i) { d.classList.toggle("active", i === activo); });
+      }
+      c.addEventListener("scroll", function () {
+        if (!raf) raf = requestAnimationFrame(pintar);
+      }, { passive: true });
+      dots.forEach(function (d) {
+        d.addEventListener("click", function () {
+          var it = items[+d.dataset.dot];
+          if (!it) return;
+          c.scrollTo({ left: it.offsetLeft - (c.clientWidth - it.offsetWidth) / 2, behavior: "smooth" });
+        });
+      });
+      pintar();
+    });
+  };
+
   App.confirmar = function (msg, opciones) {
     var op = opciones || {};
     return new Promise(function (resolve) {

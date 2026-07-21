@@ -241,12 +241,7 @@ window.App = window.App || {};
 
     var cuerpo = "";
     if (p.fotos && p.fotos.length) {
-      cuerpo += '<img src="' + p.fotos[0] + '" style="width:100%;max-height:260px;object-fit:cover;border-radius:16px">';
-      if (p.fotos.length > 1) {
-        cuerpo += '<div class="flex" style="gap:6px;margin-top:6px">' + p.fotos.slice(1).map(function (f) {
-          return '<img src="' + f + '" class="thumb">';
-        }).join("") + "</div>";
-      }
+      cuerpo += App.carruselFotos(p.fotos, 260);
     } else {
       cuerpo += '<div class="prod-img" style="border-radius:16px;aspect-ratio:auto;height:150px;background:' +
         (p.tienda === "evz" ? "linear-gradient(135deg,rgba(10,132,255,.14),rgba(0,184,169,.12))" : "linear-gradient(135deg,rgba(232,67,143,.14),rgba(108,92,231,.12))") +
@@ -337,6 +332,7 @@ window.App = window.App || {};
         (esSuper ? '<button class="btn" data-editar>' + App.icon("editar") + "</button>" +
           '<button class="btn danger" data-borrar style="flex:0 0 auto">' + App.icon("basura") + "</button>" : "")
     });
+    App.carruselInit(s.el);
 
     function ajustar(i, delta) {
       if (i < 0) p.stock = Math.max(0, (+p.stock || 0) + delta);
