@@ -229,7 +229,7 @@ window.App = window.App || {};
           '<div><div class="eyebrow">Euro (cobras con esta)</div><div class="kpi-value num" style="font-size:clamp(18px,6vw,24px)">' + App.fmt.num(tasas.eur) + " Bs</div></div>" +
           '<div><div class="eyebrow">Dólar</div><div class="kpi-value num" style="font-size:clamp(18px,6vw,24px)">' + App.fmt.num(tasas.usd) + " Bs</div></div></div>" +
           '<div class="chart-note">Actualizada: ' + App.fmt.fechaRel(tasas.fecha) + " · toca para gestionar</div></div>";
-        var cardCaja = '<div class="card lift" data-ir="finanzas" style="cursor:pointer"><div class="card-head"><h2>🇻🇪 Caja en bolívares</h2></div>' +
+        var cardCaja = '<div class="card lift" data-ir="finanzas" style="cursor:pointer"><div class="card-head"><h2>💵 Caja en bolívares</h2></div>' +
           '<div class="kpi-value num" style="font-size:clamp(18px,6vw,24px)">' + App.fmt.bs(caja.saldoBs) + "</div>" +
           '<div class="kpi-foot"><span>≈ ' + App.fmt.usd(caja.valorHoyUsd) + " hoy</span>" +
           (caja.perdidaUsd > 0.5 ? '<span class="stat-delta down">▼ ' + App.fmt.usd(caja.perdidaUsd) + " por devaluación</span>" : "") +
