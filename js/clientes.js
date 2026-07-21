@@ -296,10 +296,10 @@ window.App = window.App || {};
       (c.email ? '<a class="btn sm ghost" href="mailto:' + App.esc(c.email) + '">' + App.icon("mail") + " Email</a>" : "") + "</div>";
 
     if (st) {
-      cuerpo += '<div class="grid-kpi" style="grid-template-columns:1fr 1fr 1fr;margin:4px 0 0">' +
-        '<div class="kpi" data-scroll-hist style="padding:10px 12px 8px;cursor:pointer"><div class="kpi-label">Total</div><div class="kpi-value" style="font-size:19px">' + App.fmt.usd0(st.total) + "</div></div>" +
-        '<div class="kpi" data-scroll-hist style="padding:10px 12px 8px;cursor:pointer"><div class="kpi-label">Compras</div><div class="kpi-value" style="font-size:19px">' + st.compras + "</div></div>" +
-        '<div class="kpi" data-scroll-hist style="padding:10px 12px 8px;cursor:pointer"><div class="kpi-label">Última</div><div class="kpi-value" style="font-size:15px">' + App.fmt.fechaRel(st.ultima) + "</div></div></div>";
+      cuerpo += '<div class="grid-kpi" style="grid-template-columns:repeat(3,minmax(0,1fr));margin:4px 0 0">' +
+        '<div class="kpi" data-scroll-hist style="padding:10px 12px 8px;cursor:pointer"><div class="kpi-label">Total</div><div class="kpi-value" style="font-size:clamp(14px,4.5vw,19px)">' + App.fmt.usd0(st.total) + "</div></div>" +
+        '<div class="kpi" data-scroll-hist style="padding:10px 12px 8px;cursor:pointer"><div class="kpi-label">Compras</div><div class="kpi-value" style="font-size:clamp(14px,4.5vw,19px)">' + st.compras + "</div></div>" +
+        '<div class="kpi" data-scroll-hist style="padding:10px 12px 8px;cursor:pointer"><div class="kpi-label">Última</div><div class="kpi-value" style="font-size:clamp(13px,4vw,15px)">' + App.fmt.fechaRel(st.ultima) + "</div></div></div>";
 
       var favoritos = Object.keys(st.productos).map(function (pid) {
         var p = App.prod(pid);

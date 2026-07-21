@@ -39,6 +39,8 @@ window.App = window.App || {};
     },
     logout: function () {
       if (App.MODO_NUBE && App.sb) {
+        /* al salir, los datos del negocio no se quedan en este navegador */
+        try { localStorage.removeItem("ljt_cache_nube"); localStorage.removeItem("ljt_sync_pend"); } catch (e) { }
         App.sb.auth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
         return;
       }
@@ -194,7 +196,7 @@ window.App = window.App || {};
             pie: '<button class="btn primary" data-ok>Verificar</button>',
             alCerrar: function () { if (!pasado && alCancelar) alCancelar(); }
           });
-          App.$("[data-ok]", s.foot).addEventListener("click", function () {
+          function verificar() {
             var code = App.$("#cod2fa", s.el).value.trim();
             if (code.length !== 6) { App.toast("El código tiene 6 dígitos", "err"); return; }
             App.sb.auth.mfa.challenge({ factorId: tot.id }).then(function (rc) {
@@ -206,7 +208,9 @@ window.App = window.App || {};
                 alOk();
               });
             });
-          });
+          }
+          App.$("[data-ok]", s.foot).addEventListener("click", verificar);
+          App.$("#cod2fa", s.el).addEventListener("keydown", function (e) { if (e.key === "Enter") verificar(); });
         });
       } else alOk();
     }, function () { alOk(); });
@@ -273,17 +277,18 @@ window.App = window.App || {};
       '<button class="btn primary block" id="btn-bio">' + App.icon("faceid") + " Desbloquear</button>" +
       '<div class="login-alt"><button class="btn block" id="btn-bio-salir">Cerrar sesión y entrar con contraseña</button></div>' +
       "</div>";
-    function intentar() {
+    function intentar(silencioso) {
       App.pedirBiometria().then(function () { alOk(); }, function () {
-        App.toast("No se pudo verificar — toca Desbloquear para reintentar", "err");
+        /* el intento automático puede fallar sin gesto del usuario (iOS): no asustar con toast */
+        if (!silencioso) App.toast("No se pudo verificar — toca Desbloquear para reintentar", "err");
       });
     }
-    App.$("#btn-bio").addEventListener("click", intentar);
+    App.$("#btn-bio").addEventListener("click", function () { intentar(false); });
     App.$("#btn-bio-salir").addEventListener("click", function () {
       App.desactivarBiometria();
       App.auth.logout();
     });
-    intentar();
+    intentar(true);
   };
 
   /* llega desde el correo de "olvidé mi contraseña" (evento PASSWORD_RECOVERY) */

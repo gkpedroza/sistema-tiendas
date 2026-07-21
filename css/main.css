@@ -964,6 +964,46 @@ table.mini { border-collapse: collapse; width: 100%; font-size: 13px; }
 table.mini th { text-align: left; font-size: 11px; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); padding: 7px 10px; border-bottom: 1px solid var(--hairline); white-space: nowrap; }
 table.mini td { padding: 8.5px 10px; border-bottom: 1px solid var(--hairline); vertical-align: middle; }
 table.mini tr:last-child td { border-bottom: 0; }
+
+/* ===== fixes de la auditoría móvil ronda 2 (20-jul) ===== */
+
+/* targets táctiles: mínimo cómodo sin cambiar el look (área extendida invisible) */
+.btn.sm { min-height: 40px; }
+.btn.icon { min-width: 42px; min-height: 42px; }
+.btn, .chip, .seg-btn, .tab, .stepper button { position: relative; }
+.btn.sm::after, .chip::after, .seg-btn::after, .tab::after, .stepper button::after {
+  content: ""; position: absolute; inset: -6px; border-radius: inherit;
+}
+
+/* doble-tap en controles no hace zoom de página (iOS) */
+.btn, .chip, .seg-btn, .tab, .dock-item, .row-item, .stepper button, .fab, .kpi, .switch { touch-action: manipulation; }
+
+/* notch lateral en horizontal: el contenido no se mete debajo */
+.content {
+  padding-left: max(clamp(14px, 3vw, 34px), env(safe-area-inset-left, 0px));
+  padding-right: max(clamp(14px, 3vw, 34px), env(safe-area-inset-right, 0px));
+}
+
+/* el sheet a máxima altura no roza la Dynamic Island */
+.sheet { max-height: calc(100dvh - max(42px, env(safe-area-inset-top, 0px) + 12px)); }
+
+/* fallbacks para iOS viejos (sin dvh / sin overflow clip) */
+.login-screen { min-height: 100vh; min-height: 100dvh; }
+html, body { overflow-x: hidden; }
+
+/* tablet vertical (700-900px): aprovechar el ancho en vez de columna única gigante */
+@media (min-width: 700px) and (max-width: 900px) {
+  .grid-kpi { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dash-cols, .grid-2 { grid-template-columns: 1fr 1fr; }
+}
+
+/* táctil hasta iPad landscape: inputs a 16px para que Safari no haga zoom al enfocar */
+@media (max-width: 1024px) {
+  .input, .select, .textarea { font-size: 16px; }
+}
+
+/* toasts del login: sin dock visible bajan al borde */
+body:has(#dock.hidden) .toast-stack { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
 table.mini td.num, table.mini th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ---------- Responsive ---------- */

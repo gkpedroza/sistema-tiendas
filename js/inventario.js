@@ -119,7 +119,7 @@ window.App = window.App || {};
         var topTxt = top && top.usd > 0 ? App.esc(top.producto.emoji + " " + top.producto.nombre) : "—";
         var topSub = top && top.usd > 0 ? App.fmt.usd0(top.usd) + " históricos" : "sin ventas aún";
 
-        var h = '<div class="grid-kpi" style="grid-template-columns:1fr 1fr 1fr">' +
+        var h = '<div class="grid-kpi" style="grid-template-columns:repeat(3,minmax(0,1fr))">' +
           '<div class="kpi" style="padding:12px 14px 8px"><div class="kpi-label">Top histórico</div><div class="kpi-value" style="font-size:14px;line-height:1.3">' + topTxt + '</div><div class="kpi-foot num">' + topSub + "</div></div>" +
           '<div class="kpi" style="padding:12px 14px 8px"><div class="kpi-label">Sin ventas 30d</div><div class="kpi-value" style="font-size:22px">' + sin30 + '</div><div class="kpi-foot">productos fríos</div></div>' +
           '<div class="kpi" style="padding:12px 14px 8px"><div class="kpi-label">Stock crítico</div><div class="kpi-value" style="font-size:22px">' + criticos + '</div><div class="kpi-foot">se agotan en ≤7 días</div></div></div>';
@@ -420,7 +420,7 @@ window.App = window.App || {};
       var box = App.$("#fp-fotos", s.el);
       box.innerHTML = (FP.fotos || []).map(function (f, i) {
         return '<div style="position:relative"><img src="' + f + '" class="thumb" style="width:64px;height:64px">' +
-          '<button class="btn icon" data-qf="' + i + '" style="position:absolute;top:-8px;right:-8px;width:30px;height:30px;border-radius:99px">' + App.icon("x") + "</button></div>";
+          '<button class="btn icon" data-qf="' + i + '" style="position:absolute;top:-10px;right:-10px;width:40px;height:40px;border-radius:99px">' + App.icon("x") + "</button></div>";
       }).join("") +
         '<button class="btn icon" id="fp-add-foto" style="width:64px;height:64px;border-radius:12px">' + App.icon("camara") + "</button>";
       App.$("#fp-add-foto", box).addEventListener("click", function () { App.$("#fp-file", s.el).click(); });

@@ -51,7 +51,7 @@ window.App = window.App || {};
       '<div class="logo-sub">Sistema de gestión</div></div></div>' +
       '<button class="rate-pill" id="side-tasa" title="Tasa de cobro del día"><span class="flag">🇻🇪</span> €1 = <b>' +
       App.fmt.num(App.db.settings.tasas.eur) + " Bs</b></button>" +
-      (App.MODO_NUBE ? '<div class="small muted" data-sync-estado style="padding:0 8px">☁️ Sincronizado</div>' : "") +
+      (App.MODO_NUBE ? '<div class="small muted" data-sync-estado style="padding:0 8px">' + etiquetaSync() + "</div>" : "") +
       '<nav class="side-nav">' + vis.map(function (m) {
         return '<a class="side-item" data-nav="' + m.id + '" href="#/' + m.id + '">' + App.icon(m.icono) + "<span>" + m.titulo + "</span></a>";
       }).join("") + "</nav>" +
@@ -96,6 +96,14 @@ window.App = window.App || {};
     return '<a class="dock-item" data-nav="' + m.id + '" href="#/' + m.id + '">' + App.icon(m.icono) + "<span>" + m.titulo + "</span></a>";
   }
 
+  /* etiqueta del indicador ☁️ según el estado real (no siempre "Sincronizado") */
+  function etiquetaSync() {
+    var e = App.estadoSyncActual ? App.estadoSyncActual() : "ok";
+    return e === "offline" ? "⚠️ Sin conexión — cambios en cola"
+      : e === "sync" ? "☁️ Sincronizando…"
+        : "☁️ Sincronizado";
+  }
+
   function abrirMas() {
     var u = App.auth.user;
     var enDock = ["dashboard", "ventas", "envios"];
@@ -106,7 +114,7 @@ window.App = window.App || {};
       '<div class="row-main"><div class="row-title">' + App.esc(u.nombre) + '</div><div class="row-sub">' +
       (u.rol === "super" ? "Súper usuario" : "Vendedor") + "</div></div>" +
       '<button class="rate-pill" data-mas-tasa>🇻🇪 €1 = <b>' + App.fmt.num(App.db.settings.tasas.eur) + " Bs</b></button></div>" +
-      (App.MODO_NUBE ? '<div class="small muted" data-sync-estado style="padding:2px 4px 6px">☁️ Sincronizado</div>' : "") +
+      (App.MODO_NUBE ? '<div class="small muted" data-sync-estado style="padding:2px 4px 6px">' + etiquetaSync() + "</div>" : "") +
       '<div class="list">' + resto.map(function (m) {
         return '<a class="row-item" data-mas-ir="' + m.id + '" href="#/' + m.id + '"><div class="thumb">' + App.icon(m.icono) + "</div>" +
           '<div class="row-main"><div class="row-title">' + m.titulo + "</div></div>" + App.icon("chevR") + "</a>";
@@ -116,13 +124,12 @@ window.App = window.App || {};
       '<button class="btn danger" data-mas-salir style="flex:1">' + App.icon("salir") + " Salir</button></div>";
 
     var s = App.sheet({ titulo: "Más", cuerpo: cuerpo });
-    App.$$("[data-mas-ir]", s.el).forEach(function (a) {
-      a.addEventListener("click", function () { s.cerrar(); });
-    });
+    /* los enlaces navegan y rutear() cierra el sheet — cerrarlo aquí haría history.back()
+       en plena navegación y podría comerse el destino */
     var bt = App.$("[data-mas-tasa]", s.el);
     if (bt) bt.addEventListener("click", function () {
-      s.cerrar();
       if (App.auth.puede("finanzas")) location.hash = "#/finanzas";
+      else s.cerrar();
     });
     App.$("[data-mas-tema]", s.el).addEventListener("click", function () {
       App.setTema(esOscuro ? "claro" : "oscuro");
@@ -139,6 +146,7 @@ window.App = window.App || {};
 
   /* ---------- router ---------- */
   function rutear() {
+    if (App.cerrarSheets) App.cerrarSheets(); // navegar cierra cualquier sheet abierto
     var id = (location.hash || "#/dashboard").replace(/^#\//, "") || "dashboard";
     var m = modulo(id);
     if (!m || !App.auth.puede(id)) {
@@ -244,14 +252,40 @@ window.App = window.App || {};
       App.sb.auth.getSession().then(function (r) {
         var ses = r.data ? r.data.session : null;
         if (!ses) { App.renderLogin(); return; }
+        function splash() {
+          var root = App.$("#login-root");
+          root.className = "login-screen";
+          root.classList.remove("hidden");
+          root.innerHTML = '<div class="login-card view"><div class="logo-mark">☁️</div>' +
+            '<div class="login-title">Cargando tus datos…</div>' +
+            '<div class="login-sub">Un momento</div></div>';
+        }
         function arrancar() {
+          splash();
           App.iniciarNube(ses).then(function () { App.iniciarApp(); }, function (e2) {
+            /* sin conexión pero con caché local: se puede trabajar igual (los cambios quedan en cola) */
+            var uid = ses.user.id;
+            var perfil = (App.db.usuarios || []).filter(function (u) { return u.id === uid; })[0];
+            if (!(e2 && e2.sinPerfil) && perfil) {
+              App.auth.user = perfil;
+              App.auth.user.email = ses.user.email || "";
+              App.iniciarApp();
+              App.toast("Sin conexión — estás viendo la última copia guardada en este equipo");
+              return;
+            }
             App.toast(e2 && e2.sinPerfil ? e2.message : "No se pudo conectar con el servidor — revisa tu internet y recarga", "err");
             App.renderLogin();
           });
         }
-        if (App.bioActivo && App.bioActivo()) App.renderBloqueo(arrancar);
-        else arrancar();
+        function conBio() {
+          if (App.bioActivo && App.bioActivo()) App.renderBloqueo(arrancar);
+          else arrancar();
+        }
+        /* si el 2FA está activado, también protege el arranque con sesión guardada */
+        splash();
+        App.verificar2FASiHaceFalta(conBio, function () {
+          App.sb.auth.signOut().then(function () { App.renderLogin(); });
+        });
       });
       return;
     }

@@ -31,7 +31,7 @@ window.App = window.App || {};
           if (!verificado) App.sb.auth.mfa.unenroll({ factorId: f.id });
         }
       });
-      App.$("[data-ok]", s.foot).addEventListener("click", function () {
+      function verificarAlta() {
         var code = App.$("#fa-cod", s.el).value.trim();
         if (code.length !== 6) { App.toast("El código tiene 6 dígitos", "err"); return; }
         App.sb.auth.mfa.challenge({ factorId: f.id }).then(function (rc) {
@@ -44,7 +44,9 @@ window.App = window.App || {};
             App.render();
           });
         });
-      });
+      }
+      App.$("[data-ok]", s.foot).addEventListener("click", verificarAlta);
+      App.$("#fa-cod", s.el).addEventListener("keydown", function (e) { if (e.key === "Enter") verificarAlta(); });
     });
   }
 
@@ -63,7 +65,7 @@ window.App = window.App || {};
         '<div class="field"><label>Nombre</label><input class="input" id="aj-nombre" value="' + App.esc(u.nombre) + '"></div>' +
         '<div class="field"><label>Emoji</label><input class="input" id="aj-emoji" value="' + App.esc(u.emoji || "👑") + '" maxlength="4"></div>' +
         '<div class="field"><label>Email</label><input class="input" id="aj-email" type="email" value="' + App.esc(u.email || "") + '"' + (App.MODO_NUBE ? " disabled" : "") + "></div>" +
-        '<div class="field"><label>Nueva contraseña</label><input class="input" id="aj-clave" type="password" placeholder="(sin cambios)"></div>' +
+        '<div class="field"><label>Nueva contraseña</label><input class="input" id="aj-clave" type="password" autocomplete="new-password" placeholder="(sin cambios)"></div>' +
         "</div>" +
         '<button class="btn primary" id="aj-guardar-perfil" style="margin-top:10px">Guardar perfil</button></div>';
 
@@ -106,7 +108,7 @@ window.App = window.App || {};
         App.db.usuarios.forEach(function (us) {
           html += '<div class="row-item" data-user="' + us.id + '"><div class="avatar">' + (us.emoji || App.iniciales(us.nombre)) + "</div>" +
             '<div class="row-main"><div class="row-title">' + App.esc(us.nombre) + "</div>" +
-            '<div class="row-sub">' + App.esc(us.email) + " · " + (us.rol === "super" ? "súper usuario" : "vendedor" + (us.comision ? " · " + us.comision + "% comisión" : "")) + "</div></div>" +
+            '<div class="row-sub">' + (us.email ? App.esc(us.email) + " · " : "") + (us.rol === "super" ? "súper usuario" : "vendedor" + (us.comision ? " · " + us.comision + "% comisión" : "")) + "</div></div>" +
             App.icon("chevR") + "</div>";
         });
         html += "</div></div>";
@@ -157,7 +159,7 @@ window.App = window.App || {};
           ? '<p class="small muted">☁️ Tus datos viven en el servidor y se sincronizan solos entre dispositivos. El respaldo JSON es una copia adicional de seguridad.</p>'
           : '<p class="small muted">Los datos viven en este navegador. Descarga un respaldo antes de limpiar caché o cambiar de equipo.</p>') +
         '<div class="small" style="margin-top:6px">Último respaldo: <b>' +
-        (App.db.meta.ultimoRespaldo ? App.fmt.fechaRel(App.db.meta.ultimoRespaldo) : "nunca — descárgalo hoy") + "</b></div>" +
+        ((App.db.settings.ultimoRespaldo || App.db.meta.ultimoRespaldo) ? App.fmt.fechaRel(App.db.settings.ultimoRespaldo || App.db.meta.ultimoRespaldo) : "nunca — descárgalo hoy") + "</b></div>" +
         '<div class="flex wrap" style="gap:8px;margin-top:10px">' +
         '<button class="btn" id="aj-exportar">' + App.icon("descargar") + " Descargar respaldo</button>" +
         (App.MODO_NUBE
@@ -174,7 +176,9 @@ window.App = window.App || {};
           '<button class="btn sm ghost" id="aj-csv-i">📊 CSV inventario</button></div>' : "") +
         "</div>";
 
-      html += '<div class="small muted" style="margin:16px 4px">Sistema La Teacher · En Vzla — prototipo v0.1 (local). ' +
+      html += App.MODO_NUBE
+        ? '<div class="small muted" style="margin:16px 4px">Sistema La Teacher · En Vzla — versión online. Datos y cuentas protegidos en el servidor; funciona en todos tus dispositivos.</div></div>'
+        : '<div class="small muted" style="margin:16px 4px">Sistema La Teacher · En Vzla — prototipo v0.1 (local). ' +
         "Fase 2: versión online con seguridad real, tasa BCV automática, lectura de guías con IA y notificaciones.</div></div>";
 
       el.innerHTML = html;
@@ -457,7 +461,8 @@ window.App = window.App || {};
     function pintarPermisos() {
       var box = App.$("#fu-permisos", s.el);
       if (FU.rol === "super") { box.innerHTML = '<span class="pill ok">Acceso total ✓</span>'; return; }
-      box.innerHTML = MODULOS_PERMISO.filter(function (m) { return ["finanzas", "ajustes"].indexOf(m[0]) < 0; }).map(function (m) {
+      /* "ajustes" sí es asignable: ahí viven su perfil, contraseña y seguridad (2FA/Face ID) */
+      box.innerHTML = MODULOS_PERMISO.filter(function (m) { return m[0] !== "finanzas"; }).map(function (m) {
         var activo = FU.permisos.indexOf(m[0]) >= 0;
         return '<button class="chip' + (activo ? " active" : "") + '" data-perm="' + m[0] + '">' + m[1] + "</button>";
       }).join("");
@@ -487,6 +492,11 @@ window.App = window.App || {};
       if (!nombre || (!App.MODO_NUBE && !email)) { App.toast("Nombre y email son obligatorios", "err"); return; }
       if (esNuevo && App.MODO_NUBE) { App.toast("Las cuentas nuevas se crean en el servidor (con Manuel)", "err"); return; }
       if (esNuevo && !clave) { App.toast("Ponle contraseña", "err"); return; }
+      /* nunca dejar el sistema sin súper usuario (sería un bloqueo sin vuelta atrás) */
+      if (orig && orig.rol === "super" && FU.rol !== "super") {
+        var otrosSuper = App.db.usuarios.filter(function (x) { return x.rol === "super" && x.id !== orig.id; }).length;
+        if (!otrosSuper) { App.toast("No puedes quitarle el rol súper a la única cuenta súper", "err"); return; }
+      }
       var data = orig || { id: App.uid("u") };
       data.nombre = nombre;
       if (!App.MODO_NUBE) data.email = email;

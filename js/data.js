@@ -485,6 +485,7 @@ window.App = window.App || {};
   };
   App.exportar = function () { return JSON.stringify(App.db, null, 1); };
   App.importar = function (json) {
+    if (App.MODO_NUBE) throw new Error("En la versión online no se importan respaldos locales — los datos viven en el servidor");
     var data = JSON.parse(json);
     if (!data || !data.meta || !data.settings || !data.ventas) throw new Error("Formato inválido");
     App.db = data; App.save();
@@ -1073,11 +1074,16 @@ window.App = window.App || {};
 
   /* ---------- respaldo ---------- */
   C.diasSinRespaldo = function () {
-    var u = App.db.meta.ultimoRespaldo;
+    var u = App.db.settings.ultimoRespaldo || App.db.meta.ultimoRespaldo;
     if (!u) return null;
     return Math.round((fromISO(hoyISO()) - fromISO(u)) / 864e5);
   };
-  App.marcarRespaldo = function () { App.db.meta.ultimoRespaldo = hoyISO(); App.save(); };
+  /* el marcador vive en settings (se sincroniza entre dispositivos); meta queda de respaldo local */
+  App.marcarRespaldo = function () {
+    App.db.settings.ultimoRespaldo = hoyISO();
+    App.db.meta.ultimoRespaldo = hoyISO();
+    App.save();
+  };
 
   /* descontar / reponer stock al vender */
   C.descontarStock = function (venta, signo, motivo) {
@@ -1244,7 +1250,13 @@ window.App = window.App || {};
   App.estadoSyncActual = function () { return estadoSync; };
 
   /* empuje de diferencias al servidor (con cola y reintento) */
-  var sincronizando = false, colaPendiente = false, reintentoT = null;
+  var sincronizando = false, colaPendiente = false, reintentoT = null, fallosDatos = 0;
+  var ecosPendientes = {};
+  function procesarEcosPendientes() {
+    var tablas = Object.keys(ecosPendientes);
+    ecosPendientes = {};
+    tablas.forEach(rutaEco);
+  }
   function pushNube() {
     if (!App.MODO_NUBE || !App.auth || !App.auth.user) return;
     if (sincronizando) { colaPendiente = true; return; }
@@ -1291,12 +1303,24 @@ window.App = window.App || {};
       snapshotTodo();
       try { localStorage.removeItem("ljt_sync_pend"); } catch (e) { }
       sincronizando = false;
+      fallosDatos = 0;
       setEstadoSync("ok");
+      procesarEcosPendientes();
       if (colaPendiente) { colaPendiente = false; pushNube(); }
     }).catch(function (err) {
       sincronizando = false;
       try { localStorage.setItem("ljt_sync_pend", "1"); } catch (e) { }
       setEstadoSync("offline");
+      procesarEcosPendientes();
+      /* error de DATOS (constraint, RLS, sesión vencida…) ≠ sin conexión: tras 3 intentos
+         se avisa con el mensaje real y se deja de reintentar en loop (el próximo guardado reintenta) */
+      var msg = String((err && err.message) || "");
+      var esDatos = !!(err && (err.code || err.status)) && !/fetch|network|load failed/i.test(msg);
+      if (esDatos && ++fallosDatos >= 3) {
+        fallosDatos = 0;
+        if (App.toast) App.toast("⚠️ Un cambio no se pudo guardar en el servidor: " + msg.slice(0, 140), "err");
+        return;
+      }
       clearTimeout(reintentoT);
       reintentoT = setTimeout(pushNube, 15000);
     });
@@ -1320,7 +1344,7 @@ window.App = window.App || {};
     }));
     Object.keys(NUBE_TABLAS).forEach(function (col) {
       var cfg = NUBE_TABLAS[col];
-      q.push(sb.from(cfg.tabla).select("*").range(0, 9999).then(function (r) {
+      q.push(consultaCol(col, cfg).then(function (r) {
         if (r.error) throw r.error;
         db[col] = (r.data || []).map(function (f) { return aLocal(col, f); });
       }));
@@ -1332,11 +1356,48 @@ window.App = window.App || {};
       App.db = db;
       snapshotTodo();
       guardarCache();
+      relinkAuthUser();
       return db;
     });
   };
+  /* kardex y auditoría en orden cronológico garantizado (el heap de Postgres no lo asegura) */
+  function consultaCol(col, cfg) {
+    var sel = sb.from(cfg.tabla).select("*");
+    if (col === "movimientos" || col === "auditoria") sel = sel.order("fecha", { ascending: true }).order("id", { ascending: true });
+    return sel.range(0, 9999);
+  }
+  /* App.auth.user debe apuntar SIEMPRE al objeto vivo de App.db.usuarios (si no, sus ediciones no se suben) */
+  function relinkAuthUser() {
+    if (!App.auth || !App.auth.user) return;
+    var email = App.auth.user.email || "";
+    var p = (App.db.usuarios || []).filter(function (u) { return u.id === App.auth.user.id; })[0];
+    if (p) { App.auth.user = p; App.auth.user.email = email; }
+  }
 
-  /* tiempo real: cambios de otros dispositivos */
+  /* tiempo real: cambios de otros dispositivos.
+     El merge conserva las REFERENCIAS de los objetos existentes: un sheet abierto
+     sigue apuntando al objeto vivo y sus ediciones posteriores sí se guardan. */
+  function mergeColeccion(col, filas) {
+    var porId = {};
+    (App.db[col] || []).forEach(function (o) { if (o && o.id != null) porId[o.id] = o; });
+    App.db[col] = (filas || []).map(function (f) {
+      var n = aLocal(col, f);
+      var o = porId[n.id];
+      if (!o) return n;
+      Object.keys(o).forEach(function (k) { if (!(k in n)) delete o[k]; });
+      Object.keys(n).forEach(function (k) { o[k] = n[k]; });
+      return o;
+    });
+  }
+  /* no repintar si hay un sheet abierto o un campo con foco (pisaría lo que se está escribiendo) */
+  function uiOcupada() {
+    if (App.haySheetAbierto && App.haySheetAbierto()) return true;
+    var a = document.activeElement;
+    return !!(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT"));
+  }
+  function renderTrasEco() {
+    if (App.render && !uiOcupada()) App.render();
+  }
   var recargasT = {};
   function programarRecarga(col) {
     clearTimeout(recargasT[col]);
@@ -1347,30 +1408,47 @@ window.App = window.App || {};
             App.db.settings = r.data.data;
             snapSettings = JSON.stringify(App.db.settings);
             guardarCache();
-            if (App.render) App.render();
+            renderTrasEco();
           }
         });
         return;
       }
+      if (col === "__perfiles") {
+        sb.from("perfiles").select("*").then(function (r) {
+          if (r.error || !r.data) return;
+          mergeColeccion("usuarios", r.data.map(function (p) {
+            return { id: p.id, nombre: p.nombre, emoji: p.emoji, rol: p.rol, permisos: p.permisos, comision: +p.comision || 0, email: "", clave: null };
+          }));
+          relinkAuthUser();
+          App.db.usuarios.forEach(function (u) { snapPerfiles[u.id] = JSON.stringify([u.nombre, u.emoji, u.rol, u.permisos, u.comision]); });
+          guardarCache();
+          renderTrasEco();
+        });
+        return;
+      }
       var cfg = NUBE_TABLAS[col];
-      sb.from(cfg.tabla).select("*").range(0, 9999).then(function (r) {
+      consultaCol(col, cfg).then(function (r) {
         if (r.error) return;
-        App.db[col] = (r.data || []).map(function (f) { return aLocal(col, f); });
+        mergeColeccion(col, r.data);
         refrescarSnapshotCol(col);
         guardarCache();
-        if (App.render) App.render();
+        renderTrasEco();
       });
     }, 500);
+  }
+  function rutaEco(tabla) {
+    if (tabla === "settings") { programarRecarga("__settings"); return; }
+    if (tabla === "perfiles") { programarRecarga("__perfiles"); return; }
+    var col = null;
+    Object.keys(NUBE_TABLAS).forEach(function (k) { if (NUBE_TABLAS[k].tabla === tabla) col = k; });
+    if (col) programarRecarga(col);
   }
   App.suscribirNube = function () {
     try {
       sb.channel("cambios-sistema")
         .on("postgres_changes", { event: "*", schema: "public" }, function (payload) {
-          if (sincronizando) return;
-          if (payload.table === "settings") { programarRecarga("__settings"); return; }
-          var col = null;
-          Object.keys(NUBE_TABLAS).forEach(function (k) { if (NUBE_TABLAS[k].tabla === payload.table) col = k; });
-          if (col) programarRecarga(col);
+          if (sincronizando) { ecosPendientes[payload.table] = 1; return; }
+          rutaEco(payload.table);
         })
         .subscribe();
     } catch (e) { }

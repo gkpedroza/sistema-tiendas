@@ -182,7 +182,7 @@ window.App = window.App || {};
       '<div class="flex" style="margin-top:10px;gap:8px">' +
       '<button class="btn primary" id="ts-guardar" style="flex:1">Guardar tasa de hoy</button>' +
       '<button class="btn ghost" id="ts-auto" style="flex:1">🌐 Buscar automático</button></div>' +
-      '<div class="chart-note">Fuente oficial: bcv.org.ve. El botón automático usa una API pública (necesita internet); si falla, escríbela manual. En la versión online se actualizará sola cada día.</div></div>';
+      '<div class="chart-note">Fuente oficial: bcv.org.ve. El botón automático usa una API pública (necesita internet); si falla, escríbela manual. Al abrir la app cada día se intenta actualizar sola.</div></div>';
 
     html += '<div class="card section-gap"><div class="card-head"><h2>⚖️ ¿Con qué tasa cobras en Bs?</h2></div>' +
       '<div class="seg">' +

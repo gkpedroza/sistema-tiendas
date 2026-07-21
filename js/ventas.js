@@ -954,6 +954,7 @@ window.App = window.App || {};
       var bsUsd = Math.round(bsUsdNV() * 100) / 100;
       var ahora = new Date();
       var horaV = orig ? orig.fecha.slice(11, 16) : ("0" + ahora.getHours()).slice(-2) + ":" + ("0" + ahora.getMinutes()).slice(-2);
+      if (!NV.fecha) NV.fecha = App.hoyISO(); /* fecha vacía rompería el guardado en el servidor */
       var venta = {
         id: orig ? orig.id : App.uid("v"),
         fecha: NV.fecha + "T" + horaV,

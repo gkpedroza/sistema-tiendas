@@ -269,11 +269,11 @@ window.App = window.App || {};
         '<div class="field"><label>Foto de la guía</label>' +
         '<input type="file" id="g-foto" accept="image/*" capture="environment" class="hidden">' +
         '<button class="btn ghost block" id="g-btn-foto">' + App.icon("camara") + " Tomar / elegir foto</button>" +
-        '<div id="g-preview" style="margin-top:8px"></div></div>' +
-        '<div class="small muted">💡 En la versión online, la IA leerá el número de guía directo desde la foto.</div>',
+        '<div id="g-preview" style="margin-top:8px"></div></div>',
       pie: '<button class="btn primary" data-ok>Marcar como enviado</button>'
     });
 
+    var fotoSubiendo = null; /* promesa del upload en curso: guardar espera a que termine */
     App.$("#g-btn-foto", s.el).addEventListener("click", function () { App.$("#g-foto", s.el).click(); });
     App.$("#g-foto", s.el).addEventListener("change", function (e) {
       var f = e.target.files[0];
@@ -281,16 +281,20 @@ window.App = window.App || {};
       App.comprimirImagen(f, 1000).then(function (data) {
         fotoData = data;
         App.$("#g-preview", s.el).innerHTML = '<img src="' + data + '" style="width:100%;max-height:220px;object-fit:contain;border-radius:14px;background:var(--field-bg)">';
-        App.subirFoto(data, "guias").then(function (url) { fotoData = url; });
+        fotoSubiendo = App.subirFoto(data, "guias").then(function (url) { fotoData = url; }, function () { });
       }, function () { App.toast("No se pudo leer la imagen", "err"); });
     });
     App.$("[data-ok]", s.foot).addEventListener("click", function () {
       var num = App.$("#g-num", s.el).value.trim();
       if (!num && !fotoData) { App.toast("Escribe el número de guía o sube la foto", "err"); return; }
-      v.entrega.guia = { numero: num || "(en foto)", foto: fotoData, fecha: App.$("#g-fecha", s.el).value || App.hoyISO() };
-      v.entrega.estado = "enviado";
-      App.save(); App.toast("Pedido despachado 📦");
-      s.cerrar(); App.render();
+      var btn = App.$("[data-ok]", s.foot);
+      btn.disabled = true; btn.textContent = "Guardando…";
+      (fotoSubiendo || Promise.resolve()).then(function () {
+        v.entrega.guia = { numero: num || "(en foto)", foto: fotoData, fecha: App.$("#g-fecha", s.el).value || App.hoyISO() };
+        v.entrega.estado = "enviado";
+        App.save(); App.toast("Pedido despachado 📦");
+        s.cerrar(); App.render();
+      });
     });
   }
 

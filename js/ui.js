@@ -129,11 +129,17 @@ window.App = window.App || {};
      abierto (como cualquier app moderna) en vez de salir de la página. */
   var pilaSheets = [];
   var popIgnorar = 0;
-  window.addEventListener("popstate", function () {
+  window.addEventListener("popstate", function (e) {
     if (popIgnorar > 0) { popIgnorar--; return; }
     var top = pilaSheets[pilaSheets.length - 1];
     if (top) top._cerrarPorPop();
+    else if (e.state && e.state.ljtSheet) history.back(); // entrada huérfana de un sheet ya cerrado: saltarla
   });
+  /* cierra todos los sheets sin tocar el historial (se usa al cambiar de vista) */
+  App.cerrarSheets = function () {
+    for (var i = pilaSheets.length - 1; i >= 0; i--) pilaSheets[i]._cerrarPorPop();
+  };
+  App.haySheetAbierto = function () { return pilaSheets.length > 0; };
 
   App.sheet = function (opts) {
     var bd = document.createElement("div");
@@ -161,10 +167,20 @@ window.App = window.App || {};
     var enHistoria = false;
     try { history.pushState({ ljtSheet: true }, ""); enHistoria = true; } catch (eH) { }
 
+    /* teclado en pantalla: el sheet sube para que el pie (Guardar) no quede tapado */
+    var vv = window.visualViewport || null;
+    function ajusteTeclado() {
+      var oculto = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      bd.style.paddingBottom = oculto ? oculto + "px" : "";
+    }
+    if (vv) vv.addEventListener("resize", ajusteTeclado);
+
     var cerrado = false;
     function cerrar(res, porPop) {
       if (cerrado) return; cerrado = true;
       pilaSheets = pilaSheets.filter(function (x) { return x !== api; });
+      if (vv) vv.removeEventListener("resize", ajusteTeclado);
+      document.removeEventListener("keydown", onKey);
       bd.classList.add("closing"); bd.classList.remove("open");
       document.body.style.overflow = "";
       setTimeout(function () { bd.remove(); }, 380);
@@ -178,7 +194,10 @@ window.App = window.App || {};
     /* iOS: evita que arrastrar sobre el fondo oscuro scrollee la página de atrás */
     bd.addEventListener("touchmove", function (e) { if (e.target === bd) e.preventDefault(); }, { passive: false });
     App.$("[data-cerrar]", bd).addEventListener("click", function () { cerrar(); });
-    function onKey(e) { if (e.key === "Escape") { cerrar(); document.removeEventListener("keydown", onKey); } }
+    /* Escape solo cierra el sheet de arriba (no toda la pila) */
+    function onKey(e) {
+      if (e.key === "Escape" && pilaSheets[pilaSheets.length - 1] === api) cerrar();
+    }
     document.addEventListener("keydown", onKey);
 
     /* gesto: arrastrar hacia abajo para cerrar (1:1 + velocidad) */
@@ -189,6 +208,7 @@ window.App = window.App || {};
         if (!z) return;
         z.addEventListener("pointerdown", function (e) {
           if (window.innerWidth > 900) return;
+          if (e.target && e.target.closest && e.target.closest("button")) return; // la X se toca, no se arrastra
           y0 = e.clientY; dy = 0; historia = [{ y: e.clientY, t: e.timeStamp }];
           sheet.style.transition = "none";
           z.setPointerCapture(e.pointerId);
@@ -337,7 +357,9 @@ window.App = window.App || {};
     var video = App.$("#esc-video", s.el);
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       s.cerrar();
-      App.toast("Sin acceso a cámara en este entorno — se activa en la versión online (HTTPS).", "err");
+      App.toast(App.MODO_NUBE
+        ? "No se pudo abrir la cámara — revisa el permiso de cámara del navegador."
+        : "Sin acceso a cámara en este entorno — se activa en la versión online (HTTPS).", "err");
       return;
     }
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (st) {
@@ -762,6 +784,16 @@ window.App = window.App || {};
   }, true);
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrarDD(); });
   window.addEventListener("resize", cerrarDD);
+  window.addEventListener("popstate", cerrarDD);
+  window.addEventListener("hashchange", cerrarDD);
+
+  /* tocar el texto de un label enfoca su campo (target táctil extra + accesibilidad) */
+  document.addEventListener("click", function (e) {
+    var lbl = e.target.closest && e.target.closest(".field > label");
+    if (!lbl) return;
+    var campo = lbl.parentNode.querySelector("input,select,textarea");
+    if (campo && !campo.disabled) campo.focus();
+  });
   document.addEventListener("scroll", function (e) {
     if (ddPanel && !(e.target.closest && e.target.closest(".dd-panel"))) cerrarDD();
   }, true);
