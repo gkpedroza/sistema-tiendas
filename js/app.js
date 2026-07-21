@@ -168,11 +168,13 @@ window.App = window.App || {};
       m = App.modDashboard;
     }
     var mismaVista = rutaActual === m.id;
+    var esPrimera = rutaActual === null;
     rutaActual = m.id;
     /* repintado de la misma vista (filtros, guardados, ecos): sin animación ni salto de scroll */
     if (mismaVista) { montarVista(m, true, true); return; }
-    /* cambio de sección: transición nativa tipo app (crossfade); fallback = animación CSS */
-    if (document.startViewTransition) {
+    /* cambio de sección: transición nativa tipo app (crossfade); fallback = animación CSS.
+       El PRIMER pintado va directo (sin crossfade de página completa al abrir). */
+    if (!esPrimera && document.startViewTransition) {
       document.startViewTransition(function () { montarVista(m, true, false); });
     } else {
       montarVista(m, false, false);

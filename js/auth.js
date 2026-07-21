@@ -39,9 +39,21 @@ window.App = window.App || {};
     },
     logout: function () {
       if (App.MODO_NUBE && App.sb) {
-        /* al salir, los datos del negocio no se quedan en este navegador */
-        try { localStorage.removeItem("ljt_cache_nube"); localStorage.removeItem("ljt_sync_pend"); } catch (e) { }
-        App.sb.auth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
+        /* con Face ID activo, "salir" ofrece bloquear (como las apps de banco) o salir del todo */
+        if (App.bioActivo && App.bioActivo() && App.auth.user) {
+          var s = App.sheet({
+            titulo: "¿Cómo quieres salir?",
+            cuerpo: '<div class="list">' +
+              '<div class="row-item" data-op-bloquear><div class="thumb">🔒</div><div class="row-main">' +
+              '<div class="row-title">Bloquear la app</div><div class="row-sub">Para volver: Face ID / huella, sin contraseña</div></div></div>' +
+              '<div class="row-item" data-op-salir><div class="thumb">🚪</div><div class="row-main">' +
+              '<div class="row-title">Cerrar sesión del todo</div><div class="row-sub">Pedirá email y contraseña otra vez</div></div></div></div>'
+          });
+          App.$("[data-op-bloquear]", s.el).addEventListener("click", function () { s.cerrar(); App.bloquearApp(); });
+          App.$("[data-op-salir]", s.el).addEventListener("click", function () { s.cerrar(); salirNube(); });
+          return;
+        }
+        salirNube();
         return;
       }
       sessionStorage.removeItem(SS_KEY);
@@ -176,6 +188,23 @@ window.App = window.App || {};
       });
     });
   }
+
+  /* salir de verdad: limpiar el caché del negocio y cerrar la sesión del servidor */
+  function salirNube() {
+    try { localStorage.removeItem("ljt_cache_nube"); localStorage.removeItem("ljt_sync_pend"); } catch (e) { }
+    App.sb.auth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
+  }
+
+  /* bloquear la app a mano (la sesión sigue viva; se desbloquea con biometría) */
+  App.bloquearApp = function () {
+    App.$("#app").classList.add("hidden");
+    App.$("#dock").classList.add("hidden");
+    App.renderBloqueo(function () {
+      App.$("#login-root").classList.add("hidden");
+      App.$("#app").classList.remove("hidden");
+      App.$("#dock").classList.remove("hidden");
+    });
+  };
 
   /* ---------- 2FA real (TOTP de Supabase): pide el código si está activada ---------- */
   App.verificar2FASiHaceFalta = function (alOk, alCancelar) {
