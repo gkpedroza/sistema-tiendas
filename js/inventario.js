@@ -436,7 +436,9 @@ window.App = window.App || {};
     });
     App.$("#fp-file", s.el).addEventListener("change", function (e) {
       var files = Array.prototype.slice.call(e.target.files);
-      Promise.all(files.map(function (f) { return App.comprimirImagen(f, 900); })).then(function (datas) {
+      Promise.all(files.map(function (f) {
+        return App.comprimirImagen(f, 900).then(function (d) { return App.subirFoto(d, "productos"); });
+      })).then(function (datas) {
         FP.fotos = (FP.fotos || []).concat(datas).slice(0, 5);
         pintarFotos();
       }, function () { App.toast("No se pudo procesar alguna imagen", "err"); });

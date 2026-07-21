@@ -27,22 +27,26 @@ window.App = window.App || {};
         '<div class="form-grid">' +
         '<div class="field"><label>Nombre</label><input class="input" id="aj-nombre" value="' + App.esc(u.nombre) + '"></div>' +
         '<div class="field"><label>Emoji</label><input class="input" id="aj-emoji" value="' + App.esc(u.emoji || "👑") + '" maxlength="4"></div>' +
-        '<div class="field"><label>Email</label><input class="input" id="aj-email" type="email" value="' + App.esc(u.email) + '"></div>' +
+        '<div class="field"><label>Email</label><input class="input" id="aj-email" type="email" value="' + App.esc(u.email || "") + '"' + (App.MODO_NUBE ? " disabled" : "") + "></div>" +
         '<div class="field"><label>Nueva contraseña</label><input class="input" id="aj-clave" type="password" placeholder="(sin cambios)"></div>' +
         "</div>" +
         '<button class="btn primary" id="aj-guardar-perfil" style="margin-top:10px">Guardar perfil</button></div>';
 
       /* seguridad */
       html += '<div class="card section-gap"><div class="card-head"><h2>🔐 Seguridad</h2></div><div class="list">' +
-        '<div class="row-item static"><div class="thumb">🔐</div><div class="row-main"><div class="row-title">Verificación en dos pasos</div>' +
-        '<div class="row-sub">Activada (demo: código 246810)</div></div><span class="pill ok">✓</span></div>' +
+        (App.MODO_NUBE
+          ? '<div class="row-item static"><div class="thumb">☁️</div><div class="row-main"><div class="row-title">Login real con servidor</div>' +
+          '<div class="row-sub">Cuentas y contraseñas protegidas en Supabase · 2FA TOTP llega en la fase 2.2</div></div><span class="pill ok">✓</span></div>'
+          : '<div class="row-item static"><div class="thumb">🔐</div><div class="row-main"><div class="row-title">Verificación en dos pasos</div>' +
+          '<div class="row-sub">Activada (demo: código 246810)</div></div><span class="pill ok">✓</span></div>') +
         (esSuper ? '<div class="row-item static"><div class="thumb">🔒</div><div class="row-main"><div class="row-title">Candado de precios</div>' +
           '<div class="row-sub">Los vendedores no pueden modificar precios al vender (tú sí)</div></div>' +
           '<span class="switch"><input type="checkbox" id="aj-lock-precio"' + (s.bloquearPrecioVendedor !== false ? " checked" : "") + "><i></i></span></div>" : "") +
         '<div class="row-item static"><div class="thumb">👤</div><div class="row-main"><div class="row-title">Face ID / huella</div>' +
         '<div class="row-sub">Disponible en la versión online (passkeys)</div></div><span class="pill">Fase 2</span></div>' +
         "</div>" +
-        '<div class="flex" style="gap:8px;margin-top:10px"><button class="btn sm ghost" id="aj-reset2fa">Restablecer 2FA</button>' +
+        '<div class="flex" style="gap:8px;margin-top:10px">' +
+        (App.MODO_NUBE ? "" : '<button class="btn sm ghost" id="aj-reset2fa">Restablecer 2FA</button>') +
         '<button class="btn sm danger" id="aj-logout">' + App.icon("salir") + " Cerrar sesión</button></div></div>";
 
       /* recordatorios / notificaciones */
@@ -57,7 +61,8 @@ window.App = window.App || {};
       if (esSuper) {
         /* usuarios */
         html += '<div class="card section-gap"><div class="card-head"><h2>👥 Usuarios y permisos</h2>' +
-          '<button class="btn sm ghost" id="aj-user-nuevo">+ Usuario</button></div><div class="list">';
+          (App.MODO_NUBE ? '<span class="pill">las cuentas nuevas las crea Manuel</span>' : '<button class="btn sm ghost" id="aj-user-nuevo">+ Usuario</button>') +
+          '</div><div class="list">';
         App.db.usuarios.forEach(function (us) {
           html += '<div class="row-item" data-user="' + us.id + '"><div class="avatar">' + (us.emoji || App.iniciales(us.nombre)) + "</div>" +
             '<div class="row-main"><div class="row-title">' + App.esc(us.nombre) + "</div>" +
@@ -108,15 +113,19 @@ window.App = window.App || {};
 
       /* datos */
       html += '<div class="card section-gap"><div class="card-head"><h2>💾 Datos y respaldo</h2></div>' +
-        '<p class="small muted">Los datos viven en este navegador. Descarga un respaldo antes de limpiar caché o cambiar de equipo.</p>' +
+        (App.MODO_NUBE
+          ? '<p class="small muted">☁️ Tus datos viven en el servidor y se sincronizan solos entre dispositivos. El respaldo JSON es una copia adicional de seguridad.</p>'
+          : '<p class="small muted">Los datos viven en este navegador. Descarga un respaldo antes de limpiar caché o cambiar de equipo.</p>') +
         '<div class="small" style="margin-top:6px">Último respaldo: <b>' +
         (App.db.meta.ultimoRespaldo ? App.fmt.fechaRel(App.db.meta.ultimoRespaldo) : "nunca — descárgalo hoy") + "</b></div>" +
         '<div class="flex wrap" style="gap:8px;margin-top:10px">' +
         '<button class="btn" id="aj-exportar">' + App.icon("descargar") + " Descargar respaldo</button>" +
-        '<button class="btn" id="aj-importar">' + App.icon("subir") + " Importar respaldo</button>" +
-        '<input type="file" id="aj-file" accept="application/json" class="hidden">' +
-        (esSuper ? '<button class="btn danger" id="aj-reset">Restaurar demo</button>' : "") +
-        (esSuper && App.db.meta.esDemo !== false
+        (App.MODO_NUBE
+          ? '<button class="btn" id="aj-recargar">🔄 Recargar del servidor</button>'
+          : '<button class="btn" id="aj-importar">' + App.icon("subir") + " Importar respaldo</button>" +
+          '<input type="file" id="aj-file" accept="application/json" class="hidden">') +
+        (esSuper && !App.MODO_NUBE ? '<button class="btn danger" id="aj-reset">Restaurar demo</button>' : "") +
+        (esSuper && !App.MODO_NUBE && App.db.meta.esDemo !== false
           ? '<button class="btn primary" id="aj-estreno">🚀 Empezar de cero (borrar datos de ejemplo)</button>' : "") +
         "</div>" +
         (esSuper ? '<div class="flex wrap" style="gap:8px;margin-top:8px">' +
@@ -136,13 +145,23 @@ window.App = window.App || {};
         if (!nombre) { App.toast("El nombre no puede quedar vacío", "err"); return; }
         u.nombre = nombre;
         u.emoji = App.$("#aj-emoji").value.trim() || u.emoji;
-        u.email = App.$("#aj-email").value.trim();
         var clave = App.$("#aj-clave").value;
-        if (clave) u.clave = clave;
+        if (App.MODO_NUBE) {
+          if (clave) {
+            if (clave.length < 8) { App.toast("La contraseña nueva necesita mínimo 8 caracteres", "err"); return; }
+            App.sb.auth.updateUser({ password: clave }).then(function (r) {
+              App.toast(r.error ? "Perfil guardado, pero la clave no se pudo cambiar: " + r.error.message : "Perfil y contraseña actualizados ✓", r.error ? "err" : undefined);
+            });
+          }
+        } else {
+          u.email = App.$("#aj-email").value.trim();
+          if (clave) u.clave = clave;
+        }
         App.save(); App.toast("Perfil actualizado");
         App.montarShell(); App.render();
       });
-      App.$("#aj-reset2fa").addEventListener("click", function () {
+      var bReset2fa = App.$("#aj-reset2fa");
+      if (bReset2fa) bReset2fa.addEventListener("click", function () {
         App.sheet({
           titulo: "Restablecer 2FA",
           cuerpo: "<p>En la versión online: se envía un enlace al email, se invalida el autenticador anterior y se configura uno nuevo escaneando un código QR.</p><p class='muted small' style='margin-top:8px'>En el prototipo el código siempre es <b>246810</b>.</p>"
@@ -209,8 +228,22 @@ window.App = window.App || {};
         App.descargarCSV("inventario", filas);
         App.toast("CSV de inventario descargado 📊");
       });
-      App.$("#aj-importar").addEventListener("click", function () { App.$("#aj-file").click(); });
-      App.$("#aj-file").addEventListener("change", function (e) {
+      var bRecargar = App.$("#aj-recargar");
+      if (bRecargar) bRecargar.addEventListener("click", function () {
+        bRecargar.disabled = true;
+        App.cargarNube().then(function () {
+          bRecargar.disabled = false;
+          App.toast("Datos recargados del servidor ☁️");
+          App.render();
+        }, function () {
+          bRecargar.disabled = false;
+          App.toast("No se pudo conectar con el servidor", "err");
+        });
+      });
+      var bImp = App.$("#aj-importar");
+      if (bImp) bImp.addEventListener("click", function () { App.$("#aj-file").click(); });
+      var inpFile = App.$("#aj-file");
+      if (inpFile) inpFile.addEventListener("change", function (e) {
         var f = e.target.files[0];
         if (!f) return;
         var lector = new FileReader();
@@ -237,7 +270,8 @@ window.App = window.App || {};
       });
 
       if (esSuper) {
-        App.$("#aj-user-nuevo").addEventListener("click", function () { formUsuario(null); });
+        var bUserNuevo = App.$("#aj-user-nuevo");
+        if (bUserNuevo) bUserNuevo.addEventListener("click", function () { formUsuario(null); });
         App.delegar(el, "click", "[data-user]", function (e, t) {
           var us = App.usuario(t.dataset.user);
           if (us) formUsuario(us);
@@ -321,8 +355,10 @@ window.App = window.App || {};
       cuerpo: '<div class="form-grid">' +
         '<div class="field"><label>Nombre</label><input class="input" id="fu-nombre" value="' + App.esc(orig ? orig.nombre : "") + '"></div>' +
         '<div class="field"><label>Emoji</label><input class="input" id="fu-emoji" value="' + App.esc(orig ? orig.emoji || "" : "🧑‍💼") + '" maxlength="4"></div>' +
-        '<div class="field"><label>Email (para entrar)</label><input class="input" id="fu-email" type="email" value="' + App.esc(orig ? orig.email : "") + '"></div>' +
-        '<div class="field"><label>Contraseña</label><input class="input" id="fu-clave" placeholder="' + (esNuevo ? "obligatoria" : "(sin cambios)") + '"></div>' +
+        (App.MODO_NUBE
+          ? '<div class="field full"><label>Cuenta</label><div class="small muted" style="padding:6px 2px">El email y la contraseña se gestionan en el servidor (con Manuel). Aquí editas nombre, rol, comisión y permisos.</div></div>'
+          : '<div class="field"><label>Email (para entrar)</label><input class="input" id="fu-email" type="email" value="' + App.esc(orig ? orig.email : "") + '"></div>' +
+          '<div class="field"><label>Contraseña</label><input class="input" id="fu-clave" placeholder="' + (esNuevo ? "obligatoria" : "(sin cambios)") + '"></div>') +
         '<div class="field full"><label>Rol</label><div class="seg" id="fu-rol">' +
         '<button type="button" class="seg-btn' + (FU.rol === "super" ? " active" : "") + '" data-v="super">👑 Súper</button>' +
         '<button type="button" class="seg-btn' + (FU.rol === "vendedor" ? " active" : "") + '" data-v="vendedor">Vendedor</button></div></div>' +
@@ -331,7 +367,7 @@ window.App = window.App || {};
         '<h3 style="margin-top:12px">Qué puede ver</h3>' +
         '<div class="small muted" style="margin-bottom:6px">El súper usuario siempre ve todo (incluidos costos y finanzas).</div>' +
         '<div id="fu-permisos" class="chips" style="margin-top:4px"></div>',
-      pie: (orig && orig.id !== App.auth.user.id ? '<button class="btn danger" data-borrar style="flex:0 0 auto">' + App.icon("basura") + "</button>" : "") +
+      pie: (orig && orig.id !== App.auth.user.id && !App.MODO_NUBE ? '<button class="btn danger" data-borrar style="flex:0 0 auto">' + App.icon("basura") + "</button>" : "") +
         '<button class="btn primary" data-ok>' + (esNuevo ? "Crear usuario" : "Guardar") + "</button>"
     });
 
@@ -361,15 +397,18 @@ window.App = window.App || {};
 
     App.$("[data-ok]", s.foot).addEventListener("click", function () {
       var nombre = App.$("#fu-nombre", s.el).value.trim();
-      var email = App.$("#fu-email", s.el).value.trim();
-      var clave = App.$("#fu-clave", s.el).value;
-      if (!nombre || !email) { App.toast("Nombre y email son obligatorios", "err"); return; }
+      var campoEmail = App.$("#fu-email", s.el);
+      var campoClave = App.$("#fu-clave", s.el);
+      var email = campoEmail ? campoEmail.value.trim() : (orig ? orig.email : "");
+      var clave = campoClave ? campoClave.value : "";
+      if (!nombre || (!App.MODO_NUBE && !email)) { App.toast("Nombre y email son obligatorios", "err"); return; }
+      if (esNuevo && App.MODO_NUBE) { App.toast("Las cuentas nuevas se crean en el servidor (con Manuel)", "err"); return; }
       if (esNuevo && !clave) { App.toast("Ponle contraseña", "err"); return; }
       var data = orig || { id: App.uid("u") };
       data.nombre = nombre;
-      data.email = email;
+      if (!App.MODO_NUBE) data.email = email;
       data.emoji = App.$("#fu-emoji", s.el).value.trim();
-      if (clave) data.clave = clave;
+      if (clave && !App.MODO_NUBE) data.clave = clave;
       data.rol = FU.rol;
       data.comision = parseFloat(App.$("#fu-comision", s.el).value) || 0;
       data.permisos = FU.rol === "super" ? "*" : FU.permisos;

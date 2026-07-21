@@ -14,6 +14,7 @@ window.App = window.App || {};
   App.auth = {
     user: null,
     sesionActiva: function () {
+      if (App.MODO_NUBE) return false; // en nube la sesión la maneja Supabase (arranque asíncrono en app.js)
       var id = sessionStorage.getItem(SS_KEY);
       if (!id) return false;
       var u = App.usuario(id);
@@ -37,6 +38,10 @@ window.App = window.App || {};
       return true;
     },
     logout: function () {
+      if (App.MODO_NUBE && App.sb) {
+        App.sb.auth.signOut().then(function () { location.reload(); }, function () { location.reload(); });
+        return;
+      }
       sessionStorage.removeItem(SS_KEY);
       location.reload();
     },
@@ -53,6 +58,52 @@ window.App = window.App || {};
   App.renderLogin = function () {
     var root = App.$("#login-root");
     root.className = "login-screen";
+
+    /* ---- login REAL (Supabase Auth) cuando hay conexión configurada ---- */
+    if (App.MODO_NUBE) {
+      root.innerHTML =
+        '<div class="login-card view">' +
+        '<div class="logo-mark">🧸</div>' +
+        '<div class="login-title">La Teacher · En Vzla</div>' +
+        '<div class="login-sub">Entra con tu cuenta</div>' +
+        '<form id="f-login-nube">' +
+        '<div class="field"><label>Email</label><input class="input" name="email" type="email" autocomplete="username" required></div>' +
+        '<div class="field"><label>Contraseña</label><input class="input" name="clave" type="password" autocomplete="current-password" required></div>' +
+        '<button class="btn primary block" type="submit" id="btn-entrar-nube">Entrar</button>' +
+        "</form>" +
+        '<div class="login-alt"><button class="btn ghost block" id="btn-olvide">¿Olvidaste tu contraseña?</button></div>' +
+        '<div class="login-hint">☁️ Conectado al servidor — tus datos se sincronizan entre todos tus dispositivos.</div>' +
+        "</div>";
+
+      App.$("#f-login-nube").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var fd = new FormData(e.target);
+        var btn = App.$("#btn-entrar-nube");
+        btn.disabled = true; btn.textContent = "Entrando…";
+        App.sb.auth.signInWithPassword({ email: String(fd.get("email")).trim(), password: String(fd.get("clave")) }).then(function (r) {
+          if (r.error) {
+            btn.disabled = false; btn.textContent = "Entrar";
+            App.toast(/invalid/i.test(r.error.message) ? "Email o contraseña incorrectos" : "No se pudo entrar: " + r.error.message, "err");
+            return;
+          }
+          App.iniciarNube(r.data.session).then(function () { App.iniciarApp(); }, function () {
+            btn.disabled = false; btn.textContent = "Entrar";
+            App.toast("Entraste, pero no se pudieron cargar los datos. Revisa la conexión y reintenta.", "err");
+          });
+        });
+      });
+      App.$("#btn-olvide").addEventListener("click", function () {
+        var campo = App.$("#f-login-nube input[name=email]");
+        var email = campo ? campo.value.trim() : "";
+        if (!email) { App.toast("Escribe tu email arriba y vuelve a tocar aquí", "err"); return; }
+        App.sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }).then(function (r) {
+          if (r.error) App.toast("No se pudo enviar: " + r.error.message, "err");
+          else App.toast("Te enviamos un correo para restablecerla 📧");
+        });
+      });
+      return;
+    }
+
     root.innerHTML =
       '<div class="login-card view">' +
       '<div class="logo-mark">🧸</div>' +
@@ -119,4 +170,23 @@ window.App = window.App || {};
       });
     });
   }
+
+  /* llega desde el correo de "olvidé mi contraseña" (evento PASSWORD_RECOVERY) */
+  App.mostrarNuevaClave = function () {
+    var s = App.sheet({
+      titulo: "🔐 Nueva contraseña",
+      cuerpo: '<div class="field"><label>Escribe tu nueva contraseña (mínimo 8 caracteres)</label>' +
+        '<input class="input" id="nclave" type="password" autocomplete="new-password"></div>',
+      pie: '<button class="btn primary" data-ok>Guardar contraseña</button>'
+    });
+    App.$("[data-ok]", s.foot).addEventListener("click", function () {
+      var clave = App.$("#nclave", s.el).value;
+      if (clave.length < 8) { App.toast("Mínimo 8 caracteres", "err"); return; }
+      App.sb.auth.updateUser({ password: clave }).then(function (r) {
+        if (r.error) { App.toast("No se pudo: " + r.error.message, "err"); return; }
+        App.toast("Contraseña actualizada ✓ — ya puedes entrar con ella");
+        s.cerrar();
+      });
+    });
+  };
 })();

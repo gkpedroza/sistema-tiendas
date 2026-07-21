@@ -51,6 +51,7 @@ window.App = window.App || {};
       '<div class="logo-sub">Sistema de gestión</div></div></div>' +
       '<button class="rate-pill" id="side-tasa" title="Tasa de cobro del día"><span class="flag">🇻🇪</span> €1 = <b>' +
       App.fmt.num(App.db.settings.tasas.eur) + " Bs</b></button>" +
+      (App.MODO_NUBE ? '<div class="small muted" data-sync-estado style="padding:0 8px">☁️ Sincronizado</div>' : "") +
       '<nav class="side-nav">' + vis.map(function (m) {
         return '<a class="side-item" data-nav="' + m.id + '" href="#/' + m.id + '">' + App.icon(m.icono) + "<span>" + m.titulo + "</span></a>";
       }).join("") + "</nav>" +
@@ -105,6 +106,7 @@ window.App = window.App || {};
       '<div class="row-main"><div class="row-title">' + App.esc(u.nombre) + '</div><div class="row-sub">' +
       (u.rol === "super" ? "Súper usuario" : "Vendedor") + "</div></div>" +
       '<button class="rate-pill" data-mas-tasa>🇻🇪 €1 = <b>' + App.fmt.num(App.db.settings.tasas.eur) + " Bs</b></button></div>" +
+      (App.MODO_NUBE ? '<div class="small muted" data-sync-estado style="padding:2px 4px 6px">☁️ Sincronizado</div>' : "") +
       '<div class="list">' + resto.map(function (m) {
         return '<a class="row-item" data-mas-ir="' + m.id + '" href="#/' + m.id + '"><div class="thumb">' + App.icon(m.icono) + "</div>" +
           '<div class="row-main"><div class="row-title">' + m.titulo + "</div></div>" + App.icon("chevR") + "</a>";
@@ -233,6 +235,23 @@ window.App = window.App || {};
       navigator.serviceWorker.register("sw.js").catch(function () { });
     }
     window.addEventListener("hashchange", rutear);
+
+    /* modo nube: la sesión vive en Supabase Auth (asíncrono) */
+    if (App.MODO_NUBE) {
+      App.sb.auth.onAuthStateChange(function (evento) {
+        if (evento === "PASSWORD_RECOVERY" && App.mostrarNuevaClave) App.mostrarNuevaClave();
+      });
+      App.sb.auth.getSession().then(function (r) {
+        var ses = r.data ? r.data.session : null;
+        if (!ses) { App.renderLogin(); return; }
+        App.iniciarNube(ses).then(function () { App.iniciarApp(); }, function () {
+          App.toast("No se pudo conectar con el servidor — revisa tu internet y recarga", "err");
+          App.renderLogin();
+        });
+      });
+      return;
+    }
+
     if (App.auth.sesionActiva()) App.iniciarApp();
     else App.renderLogin();
   });

@@ -281,6 +281,7 @@ window.App = window.App || {};
       App.comprimirImagen(f, 1000).then(function (data) {
         fotoData = data;
         App.$("#g-preview", s.el).innerHTML = '<img src="' + data + '" style="width:100%;max-height:220px;object-fit:contain;border-radius:14px;background:var(--field-bg)">';
+        App.subirFoto(data, "guias").then(function (url) { fotoData = url; });
       }, function () { App.toast("No se pudo leer la imagen", "err"); });
     });
     App.$("[data-ok]", s.foot).addEventListener("click", function () {

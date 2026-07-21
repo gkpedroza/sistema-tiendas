@@ -369,6 +369,15 @@ window.App = window.App || {};
 
   /* ---------- carga / persistencia ---------- */
   App.load = function () {
+    if (App.MODO_NUBE) {
+      /* en nube la verdad vive en el servidor; el caché local solo acelera el arranque */
+      App.db = dbVacio();
+      try {
+        var cache = localStorage.getItem(CACHE_NUBE);
+        if (cache) App.db = JSON.parse(cache);
+      } catch (eN) { }
+      return;
+    }
     try {
       var raw = localStorage.getItem(LS_KEY);
       if (raw) { App.db = JSON.parse(raw); migrar(); return; }
@@ -433,13 +442,26 @@ window.App = window.App || {};
   };
   App.save = function () {
     App.db.meta.actualizadoEl = new Date().toISOString();
+    if (App.MODO_NUBE) {
+      guardarCache();
+      pushNube();
+      return;
+    }
     try { localStorage.setItem(LS_KEY, JSON.stringify(App.db)); }
     catch (e) { if (App.toast) App.toast("No se pudo guardar (¿almacenamiento lleno?)", "err"); }
   };
-  App.resetDemo = function () { localStorage.removeItem(LS_KEY); location.reload(); };
+  App.resetDemo = function () {
+    if (App.MODO_NUBE) { if (App.toast) App.toast("En la versión online no hay demo que restaurar", "err"); return; }
+    localStorage.removeItem(LS_KEY);
+    location.reload();
+  };
   /* estreno: borra TODO lo de ejemplo y deja el sistema listo para datos reales.
      Conserva: usuarios, tiendas, agencias, métodos, categorías, plantilla, festividades y tasas. */
   App.empezarDeCero = function () {
+    if (App.MODO_NUBE) {
+      if (App.toast) App.toast("En la nube el borrado total se coordina con Manuel (protege la data de todos los dispositivos)", "err");
+      return;
+    }
     var db = App.db;
     db.productos = [];
     db.clientes = [];
@@ -1080,5 +1102,306 @@ window.App = window.App || {};
         p.stock = Math.max(0, (+p.stock || 0) - s * it.cant);
       }
     });
+  };
+
+  /* ============================================================
+     MODO NUBE (Supabase) — Fase 2
+     La app trabaja igual que siempre sobre App.db en memoria;
+     esta capa carga todo del servidor al iniciar, empuja las
+     diferencias en cada App.save() (con cola offline) y escucha
+     cambios de otros dispositivos en tiempo real.
+     ============================================================ */
+  var sb = null;
+  App.MODO_NUBE = false;
+  try {
+    if (window.supabase && window.SUPABASE_URL && window.SUPABASE_KEY) {
+      sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
+      App.sb = sb;
+      App.MODO_NUBE = true;
+    }
+  } catch (eSb) { App.MODO_NUBE = false; }
+
+  var CACHE_NUBE = "ljt_cache_nube";
+
+  var DEFAULTS_SETTINGS = {
+    nombreNegocio: "La Teacher · En Vzla",
+    tiendas: [
+      { id: "ljt", nombre: "Los Juguetes de la Teacher", corto: "La Teacher", emoji: "🧸" },
+      { id: "evz", nombre: "En Vzla Te Lo Consigo", corto: "En Vzla", emoji: "🛍️" }
+    ],
+    canales: ["Instagram", "WhatsApp"],
+    metodosPago: ["Zelle", "Efectivo USD", "Bolívares", "Zinli", "Binance USDT"],
+    categorias: ["Juguetes", "Disfraces", "Peluches", "Tecnología", "Hogar", "Cuidado personal", "Accesorios", "Escolar"],
+    categoriasGasto: ["Ads Instagram", "Papelería y etiquetas", "Empaques", "Transporte y envíos", "Servicios", "Comisiones", "Otros"],
+    agencias: [
+      { id: "ag1", nombre: "MRW" }, { id: "ag2", nombre: "Zoom" }, { id: "ag3", nombre: "Tealca" },
+      { id: "ag4", nombre: "Domesa" }, { id: "ag5", nombre: "Liberty Express" }
+    ],
+    tasas: { fecha: "2026-07-19", usd: 730.9, eur: 855.3, historial: [] },
+    tasaCobro: "eur",
+    avisoFestDias: 21,
+    bloquearPrecioVendedor: true,
+    plantillaWhatsApp: "✨ *{{producto}}* ✨\n\n{{descripcion}}\n\n💵 Precio: *${{precio_usd}}*\n🇻🇪 En bolívares: *Bs {{precio_bs}}* (tasa del día)\n{{tallas_linea}}🏪 {{tienda}}\n\n📲 ¡Escríbenos para apartar el tuyo! 💕"
+  };
+
+  /* mapeo colección local ↔ tabla nube (camelCase ↔ snake_case) */
+  var NUBE_TABLAS = {
+    productos: { tabla: "productos", campos: { sku: "sku", codigoBarras: "codigo_barras", nombre: "nombre", emoji: "emoji", tienda: "tienda", categoria: "categoria", genero: "genero", descripcion: "descripcion", tallas: "tallas", stock: "stock", stockMin: "stock_min", costoChina: "costo_china", flete: "flete", costoAds: "costo_ads", presupuestoAds: "presupuesto_ads", precio: "precio", fotos: "fotos", creadoEl: "creado_el" } },
+    clientes: { tabla: "clientes", campos: { nombre: "nombre", telefono: "telefono", email: "email", estado: "estado", ciudad: "ciudad", direccion: "direccion", notas: "notas", creadoEl: "creado_el" } },
+    ventas: { tabla: "ventas", ts: { fecha: "T" }, campos: { fecha: "fecha", canal: "canal", clienteId: "cliente_id", vendedorId: "vendedor_id", items: "items", promoId: "promo_id", descuento: "descuento", metodoPago: "metodo_pago", pagos: "pagos", totalUsd: "total_usd", tasaEur: "tasa_eur", tasaUsd: "tasa_usd", totalBs: "total_bs", estadoPago: "estado_pago", apartado: "apartado", abonos: "abonos", devoluciones: "devoluciones", entrega: "entrega", notas: "notas" } },
+    motorizados: { tabla: "motorizados", campos: { nombre: "nombre", telefono: "telefono" } },
+    promos: { tabla: "promos", campos: { nombre: "nombre", ocasion: "ocasion", desde: "desde", hasta: "hasta", items: "items", precioPromo: "precio_promo" } },
+    gastos: { tabla: "gastos", campos: { fecha: "fecha", tipo: "tipo", categoria: "categoria", descripcion: "descripcion", tienda: "tienda", montoUsd: "monto_usd", productoId: "producto_id", desde: "desde", hasta: "hasta" } },
+    creativos: { tabla: "creativos", campos: { fecha: "fecha", tipo: "tipo", tienda: "tienda", productoId: "producto_id", inversion: "inversion", mensajes: "mensajes", ventas: "ventas", comentario: "comentario" } },
+    cambiosDivisa: { tabla: "cambios_divisa", campos: { fecha: "fecha", montoBs: "monto_bs", tasa: "tasa", montoUsd: "monto_usd", destino: "destino", notas: "notas" } },
+    festividades: { tabla: "festividades", campos: { fecha: "fecha", nombre: "nombre", emoji: "emoji", diasAviso: "dias_aviso", notas: "notas" } },
+    proveedores: { tabla: "proveedores", campos: { nombre: "nombre", plataforma: "plataforma", contacto: "contacto", wechat: "wechat", telefono: "telefono", url: "url", direccion: "direccion", productos: "productos", notas: "notas" } },
+    compras: { tabla: "compras", campos: { proveedorId: "proveedor_id", fecha: "fecha", estado: "estado", llegadaEst: "llegada_est", recibidaEl: "recibida_el", fleteTotal: "flete_total", notas: "notas", items: "items" } },
+    movimientos: { tabla: "movimientos", ts: { fecha: " " }, soloInsertar: true, campos: { fecha: "fecha", productoId: "producto_id", talla: "talla", delta: "delta", motivo: "motivo", refId: "ref_id", nota: "nota", usuarioId: "usuario_id" } },
+    cierres: { tabla: "cierres", campos: { fecha: "fecha", porGrupo: "por_grupo", totalEsperado: "total_esperado", contadoEfectivo: "contado_efectivo", contadoBs: "contado_bs", difEfectivo: "dif_efectivo", difBs: "dif_bs", notas: "notas", usuarioId: "usuario_id" } },
+    auditoria: { tabla: "auditoria", ts: { fecha: " " }, soloInsertar: true, campos: { fecha: "fecha", usuarioId: "usuario_id", tipo: "tipo", detalle: "detalle" } }
+  };
+
+  /* fechas: el front usa hora local; el servidor guarda timestamptz (UTC) */
+  function tsALocal(ts, sep) {
+    if (!ts) return ts;
+    var d = new Date(ts);
+    if (isNaN(d.getTime())) return ts;
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + (sep || "T") + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+  function localATs(s) {
+    if (!s) return s;
+    var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+    if (!m) return s;
+    return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).toISOString();
+  }
+
+  function aLocal(col, fila) {
+    var cfg = NUBE_TABLAS[col];
+    var out = { id: fila.id };
+    Object.keys(cfg.campos).forEach(function (k) {
+      var v = fila[cfg.campos[k]];
+      if (cfg.ts && cfg.ts[k]) v = tsALocal(v, cfg.ts[k]);
+      out[k] = v === undefined ? null : v;
+    });
+    return out;
+  }
+  function aNube(col, item) {
+    var cfg = NUBE_TABLAS[col];
+    var out = { id: item.id };
+    Object.keys(cfg.campos).forEach(function (k) {
+      var v = item[k];
+      if (cfg.ts && cfg.ts[k]) v = localATs(v);
+      if (v === undefined) v = null;
+      if (v === "") { // columnas date no aceptan cadena vacía
+        var c = cfg.campos[k];
+        if (c === "desde" || c === "hasta" || c === "llegada_est" || c === "recibida_el" || c === "creado_el") v = null;
+      }
+      out[cfg.campos[k]] = v;
+    });
+    return out;
+  }
+
+  function dbVacio() {
+    var db = {
+      meta: { version: 5, esDemo: false, nube: true, ultimoRespaldo: null, actualizadoEl: new Date().toISOString() },
+      settings: JSON.parse(JSON.stringify(DEFAULTS_SETTINGS)),
+      usuarios: []
+    };
+    Object.keys(NUBE_TABLAS).forEach(function (col) { db[col] = []; });
+    return db;
+  }
+
+  /* snapshots para detectar diferencias al guardar */
+  var snapCols = {}, snapSettings = "", snapPerfiles = {};
+  function refrescarSnapshotCol(col) {
+    var m = {};
+    (App.db[col] || []).forEach(function (it) { m[it.id] = JSON.stringify(it); });
+    snapCols[col] = m;
+  }
+  function snapshotTodo() {
+    Object.keys(NUBE_TABLAS).forEach(refrescarSnapshotCol);
+    snapSettings = JSON.stringify(App.db.settings);
+    snapPerfiles = {};
+    (App.db.usuarios || []).forEach(function (u) {
+      snapPerfiles[u.id] = JSON.stringify([u.nombre, u.emoji, u.rol, u.permisos, u.comision]);
+    });
+  }
+  function guardarCache() {
+    try { localStorage.setItem(CACHE_NUBE, JSON.stringify(App.db)); } catch (e) { }
+  }
+
+  /* estado visual de la sincronización */
+  var estadoSync = "ok";
+  function setEstadoSync(e) {
+    estadoSync = e;
+    var lbl = e === "ok" ? "☁️ Sincronizado" : e === "sync" ? "☁️ Guardando…" : "⚠️ Sin conexión — se guardará al volver";
+    if (App.$$) App.$$("[data-sync-estado]").forEach(function (x) {
+      x.textContent = lbl;
+      x.style.color = e === "offline" ? "var(--danger)" : "";
+    });
+  }
+  App.estadoSyncActual = function () { return estadoSync; };
+
+  /* empuje de diferencias al servidor (con cola y reintento) */
+  var sincronizando = false, colaPendiente = false, reintentoT = null;
+  function pushNube() {
+    if (!App.MODO_NUBE || !App.auth || !App.auth.user) return;
+    if (sincronizando) { colaPendiente = true; return; }
+    sincronizando = true;
+    setEstadoSync("sync");
+    var ops = [];
+    if (JSON.stringify(App.db.settings) !== snapSettings) {
+      ops.push(sb.from("settings").update({ data: App.db.settings }).eq("id", 1));
+    }
+    Object.keys(NUBE_TABLAS).forEach(function (col) {
+      var cfg = NUBE_TABLAS[col];
+      var previos = snapCols[col] || {};
+      var vistos = {}, cambios = [];
+      (App.db[col] || []).forEach(function (it) {
+        vistos[it.id] = 1;
+        if (previos[it.id] !== JSON.stringify(it)) cambios.push(aNube(col, it));
+      });
+      if (cambios.length) {
+        ops.push(cfg.soloInsertar
+          ? sb.from(cfg.tabla).upsert(cambios, { onConflict: "id", ignoreDuplicates: true })
+          : sb.from(cfg.tabla).upsert(cambios));
+      }
+      if (!cfg.soloInsertar) {
+        var borrar = [];
+        Object.keys(previos).forEach(function (id) { if (!vistos[id]) borrar.push(id); });
+        if (borrar.length) ops.push(sb.from(cfg.tabla).delete().in("id", borrar));
+      }
+    });
+    (App.db.usuarios || []).forEach(function (u) {
+      var j = JSON.stringify([u.nombre, u.emoji, u.rol, u.permisos, u.comision]);
+      if (snapPerfiles[u.id] !== j) {
+        ops.push(sb.from("perfiles").update({ nombre: u.nombre, emoji: u.emoji, rol: u.rol, permisos: u.permisos, comision: u.comision }).eq("id", u.id));
+      }
+    });
+    if (!ops.length) {
+      sincronizando = false;
+      setEstadoSync("ok");
+      if (colaPendiente) { colaPendiente = false; pushNube(); }
+      return;
+    }
+    Promise.all(ops).then(function (resultados) {
+      var conError = resultados.filter(function (r) { return r && r.error; })[0];
+      if (conError) throw conError.error;
+      snapshotTodo();
+      try { localStorage.removeItem("ljt_sync_pend"); } catch (e) { }
+      sincronizando = false;
+      setEstadoSync("ok");
+      if (colaPendiente) { colaPendiente = false; pushNube(); }
+    }).catch(function (err) {
+      sincronizando = false;
+      try { localStorage.setItem("ljt_sync_pend", "1"); } catch (e) { }
+      setEstadoSync("offline");
+      clearTimeout(reintentoT);
+      reintentoT = setTimeout(pushNube, 15000);
+    });
+  }
+  App.sincronizarAhora = function () { pushNube(); };
+  window.addEventListener("online", function () { if (App.MODO_NUBE) pushNube(); });
+
+  /* carga completa desde el servidor */
+  App.cargarNube = function () {
+    var db = dbVacio();
+    var q = [];
+    q.push(sb.from("settings").select("data").eq("id", 1).single().then(function (r) {
+      if (r.data && r.data.data) db.settings = r.data.data;
+    }));
+    q.push(sb.from("perfiles").select("*").then(function (r) {
+      db.usuarios = (r.data || []).map(function (p) {
+        return { id: p.id, nombre: p.nombre, emoji: p.emoji, rol: p.rol, permisos: p.permisos, comision: +p.comision || 0, email: "", clave: null };
+      });
+    }));
+    Object.keys(NUBE_TABLAS).forEach(function (col) {
+      var cfg = NUBE_TABLAS[col];
+      q.push(sb.from(cfg.tabla).select("*").range(0, 9999).then(function (r) {
+        if (r.error) throw r.error;
+        db[col] = (r.data || []).map(function (f) { return aLocal(col, f); });
+      }));
+    });
+    return Promise.all(q).then(function () {
+      Object.keys(DEFAULTS_SETTINGS).forEach(function (k) {
+        if (db.settings[k] == null) db.settings[k] = JSON.parse(JSON.stringify(DEFAULTS_SETTINGS[k]));
+      });
+      App.db = db;
+      snapshotTodo();
+      guardarCache();
+      return db;
+    });
+  };
+
+  /* tiempo real: cambios de otros dispositivos */
+  var recargasT = {};
+  function programarRecarga(col) {
+    clearTimeout(recargasT[col]);
+    recargasT[col] = setTimeout(function () {
+      if (col === "__settings") {
+        sb.from("settings").select("data").eq("id", 1).single().then(function (r) {
+          if (r.data && r.data.data) {
+            App.db.settings = r.data.data;
+            snapSettings = JSON.stringify(App.db.settings);
+            guardarCache();
+            if (App.render) App.render();
+          }
+        });
+        return;
+      }
+      var cfg = NUBE_TABLAS[col];
+      sb.from(cfg.tabla).select("*").range(0, 9999).then(function (r) {
+        if (r.error) return;
+        App.db[col] = (r.data || []).map(function (f) { return aLocal(col, f); });
+        refrescarSnapshotCol(col);
+        guardarCache();
+        if (App.render) App.render();
+      });
+    }, 500);
+  }
+  App.suscribirNube = function () {
+    try {
+      sb.channel("cambios-sistema")
+        .on("postgres_changes", { event: "*", schema: "public" }, function (payload) {
+          if (sincronizando) return;
+          if (payload.table === "settings") { programarRecarga("__settings"); return; }
+          var col = null;
+          Object.keys(NUBE_TABLAS).forEach(function (k) { if (NUBE_TABLAS[k].tabla === payload.table) col = k; });
+          if (col) programarRecarga(col);
+        })
+        .subscribe();
+    } catch (e) { }
+  };
+
+  /* arranque de sesión en nube: perfil + datos + realtime */
+  App.iniciarNube = function (session) {
+    return App.cargarNube().then(function () {
+      var uid = session.user.id;
+      var perfil = (App.db.usuarios || []).filter(function (u) { return u.id === uid; })[0];
+      App.auth.user = perfil || { id: uid, nombre: session.user.email || "Usuario", rol: "vendedor", permisos: [], emoji: "🧑‍💼", comision: 0 };
+      App.auth.user.email = session.user.email || "";
+      App.suscribirNube();
+      var pend = false;
+      try { pend = localStorage.getItem("ljt_sync_pend") === "1"; } catch (e) { }
+      if (pend) pushNube();
+      setEstadoSync("ok");
+    });
+  };
+
+  /* fotos → bucket 'fotos' (con fallback al dataURL si falla) */
+  App.subirFoto = function (dataURL, carpeta) {
+    if (!App.MODO_NUBE || !dataURL || String(dataURL).indexOf("data:") !== 0) return Promise.resolve(dataURL);
+    try {
+      var b64 = dataURL.split(",")[1];
+      var bin = atob(b64);
+      var arr = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      var nombre = (carpeta || "otros") + "/" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) + ".jpg";
+      return sb.storage.from("fotos").upload(nombre, arr.buffer, { contentType: "image/jpeg" }).then(function (r) {
+        if (r.error) return dataURL;
+        return sb.storage.from("fotos").getPublicUrl(nombre).data.publicUrl;
+      }).catch(function () { return dataURL; });
+    } catch (e) { return Promise.resolve(dataURL); }
   };
 })();
