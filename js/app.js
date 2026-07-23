@@ -259,6 +259,25 @@ window.App = window.App || {};
     }
     window.addEventListener("hashchange", rutear);
 
+    /* iOS: con el teclado abierto los elementos fijos quedan "guindando" a media
+       pantalla. Mientras se escribe se esconde el dock; al cerrar el teclado, un
+       scroll nulo obliga al navegador a re-anclar todo al fondo real. */
+    if (window.visualViewport) {
+      var vvT = null;
+      var ajustarPorTeclado = function () {
+        clearTimeout(vvT);
+        vvT = setTimeout(function () {
+          var vv = window.visualViewport;
+          var tecladoAbierto = vv.height < window.innerHeight - 120;
+          var dock = App.$("#dock");
+          if (dock) dock.style.visibility = tecladoAbierto ? "hidden" : "";
+          if (!tecladoAbierto) window.scrollTo(window.scrollX, window.scrollY);
+        }, 80);
+      };
+      window.visualViewport.addEventListener("resize", ajustarPorTeclado);
+      window.visualViewport.addEventListener("scroll", ajustarPorTeclado);
+    }
+
     /* modo nube: la sesión vive en Supabase Auth (asíncrono) */
     if (App.MODO_NUBE) {
       App.sb.auth.onAuthStateChange(function (evento) {

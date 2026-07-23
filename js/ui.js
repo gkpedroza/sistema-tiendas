@@ -388,50 +388,88 @@ window.App = window.App || {};
         (p.sku && p.sku.toLowerCase() === tl);
     })[0] || null;
   };
-  App.escanear = function (alLeer) {
-    if (!("BarcodeDetector" in window)) {
-      App.toast("Este navegador no soporta cámara-escáner. Usa una pistola lectora (funciona ya) o escribe el código.", "err");
-      return;
-    }
-    var stream = null, activo = true;
-    var s = App.sheet({
-      titulo: "📷 Escanear código",
-      cuerpo: '<video id="esc-video" playsinline muted style="width:100%;max-height:320px;border-radius:14px;background:#000"></video>' +
-        '<div class="chart-note">Apunta al código de barras. Si la cámara no abre aquí (requiere HTTPS), usa una pistola lectora USB/Bluetooth: escribe el código sola en el buscador.</div>',
-      alCerrar: function () {
-        activo = false;
-        if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
-      }
+  /* motor de escaneo de respaldo (ZXing) para navegadores sin BarcodeDetector
+     (todo iPhone) — se descarga solo la primera vez que se abre la cámara */
+  function cargarZXing() {
+    return new Promise(function (resolve, reject) {
+      if (window.ZXing && window.ZXing.BrowserMultiFormatReader) { resolve(); return; }
+      var sc = document.createElement("script");
+      sc.src = "js/vendor/zxing.js";
+      sc.onload = function () {
+        if (window.ZXing && window.ZXing.BrowserMultiFormatReader) resolve();
+        else reject(new Error("zxing incompleto"));
+      };
+      sc.onerror = function () { reject(new Error("no cargó zxing")); };
+      document.head.appendChild(sc);
     });
-    var video = App.$("#esc-video", s.el);
+  }
+  App.escanear = function (alLeer) {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      s.cerrar();
       App.toast(App.MODO_NUBE
         ? "No se pudo abrir la cámara — revisa el permiso de cámara del navegador."
         : "Sin acceso a cámara en este entorno — se activa en la versión online (HTTPS).", "err");
       return;
     }
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (st) {
-      stream = st;
-      video.srcObject = st;
-      video.play();
-      var det = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "qr_code"] });
-      (function loop() {
-        if (!activo) return;
-        det.detect(video).then(function (codes) {
-          if (activo && codes && codes.length && codes[0].rawValue) {
-            activo = false;
-            if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
-            s.cerrar();
-            alLeer(codes[0].rawValue);
-            return;
-          }
-          requestAnimationFrame(loop);
-        }).catch(function () { if (activo) requestAnimationFrame(loop); });
-      })();
-    }).catch(function () {
+    var stream = null, activo = true, lectorZX = null;
+    var s = App.sheet({
+      titulo: "📷 Escanear código",
+      cuerpo: '<video id="esc-video" playsinline muted autoplay style="width:100%;max-height:320px;border-radius:14px;background:#000"></video>' +
+        '<div class="chart-note" id="esc-nota">Apunta al código de barras o QR — se lee solo.</div>',
+      alCerrar: function () {
+        activo = false;
+        if (lectorZX) { try { lectorZX.reset(); } catch (e) { } }
+        if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+      }
+    });
+    var video = App.$("#esc-video", s.el);
+    function encontrado(codigo) {
+      if (!activo || !codigo) return;
+      activo = false;
+      if (lectorZX) { try { lectorZX.reset(); } catch (e) { } }
+      if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
       s.cerrar();
-      App.toast("La cámara no está disponible aquí (requiere HTTPS/versión online). La pistola lectora sí funciona ya.", "err");
+      alLeer(codigo);
+    }
+
+    /* Ruta 1: BarcodeDetector nativo (Android/Chrome) */
+    if ("BarcodeDetector" in window) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (st) {
+        stream = st;
+        video.srcObject = st;
+        video.play();
+        var det = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "qr_code"] });
+        (function loop() {
+          if (!activo) return;
+          det.detect(video).then(function (codes) {
+            if (codes && codes.length && codes[0].rawValue) { encontrado(codes[0].rawValue); return; }
+            requestAnimationFrame(loop);
+          }).catch(function () { if (activo) requestAnimationFrame(loop); });
+        })();
+      }).catch(function () {
+        s.cerrar();
+        App.toast("La cámara no está disponible — revisa el permiso de cámara del navegador.", "err");
+      });
+      return;
+    }
+
+    /* Ruta 2: motor ZXing (iPhone y navegadores sin API nativa) */
+    var nota = App.$("#esc-nota", s.el);
+    if (nota) nota.textContent = "Cargando el lector…";
+    cargarZXing().then(function () {
+      if (!activo) return;
+      if (nota) nota.textContent = "Apunta al código de barras o QR — se lee solo.";
+      lectorZX = new ZXing.BrowserMultiFormatReader();
+      lectorZX.decodeFromConstraints({ video: { facingMode: "environment" } }, video, function (res) {
+        if (res && activo) encontrado(res.getText());
+      }).catch(function () {
+        if (!activo) return;
+        s.cerrar();
+        App.toast("La cámara no está disponible — revisa el permiso de cámara del navegador.", "err");
+      });
+    }, function () {
+      if (!activo) return;
+      s.cerrar();
+      App.toast("No se pudo descargar el lector — revisa tu internet e intenta de nuevo.", "err");
     });
   };
 
