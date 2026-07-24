@@ -119,6 +119,7 @@ window.App = window.App || {};
         return '<a class="row-item" data-mas-ir="' + m.id + '" href="#/' + m.id + '"><div class="thumb">' + App.icon(m.icono) + "</div>" +
           '<div class="row-main"><div class="row-title">' + m.titulo + "</div></div>" + App.icon("chevR") + "</a>";
       }).join("") + "</div>" +
+      (App.MODO_NUBE ? '<button class="btn block" data-mas-escaner style="margin-top:6px">📷 Escáner remoto — usar este celular como pistola de la compu</button>' : "") +
       '<div class="flex" style="gap:8px;margin-top:6px">' +
       '<button class="btn" data-mas-tema style="flex:1">' + App.icon(esOscuro ? "sol" : "luna") + " Tema " + (esOscuro ? "claro" : "oscuro") + "</button>" +
       '<button class="btn danger" data-mas-salir style="flex:1">' + App.icon("salir") + " Salir</button></div>";
@@ -135,6 +136,8 @@ window.App = window.App || {};
       App.setTema(esOscuro ? "claro" : "oscuro");
       App.montarShell(); s.cerrar();
     });
+    var be = App.$("[data-mas-escaner]", s.el);
+    if (be) be.addEventListener("click", function () { s.cerrar(); App.escanearRemoto(); });
     App.$("[data-mas-salir]", s.el).addEventListener("click", App.auth.logout);
   }
 

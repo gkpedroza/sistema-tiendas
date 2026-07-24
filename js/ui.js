@@ -403,73 +403,146 @@ window.App = window.App || {};
       document.head.appendChild(sc);
     });
   }
-  App.escanear = function (alLeer) {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      App.toast(App.MODO_NUBE
-        ? "No se pudo abrir la cámara — revisa el permiso de cámara del navegador."
-        : "Sin acceso a cámara en este entorno — se activa en la versión online (HTTPS).", "err");
+  /* lectura continua con el motor que haya (nativo o ZXing); refs permite detener */
+  function iniciarLectura(video, onCodigo, onError, refs, onListo) {
+    if ("BarcodeDetector" in window) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (st) {
+        refs.stream = st;
+        video.srcObject = st;
+        video.play();
+        if (onListo) onListo();
+        var det = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "qr_code"] });
+        (function loop() {
+          if (refs.parado) return;
+          det.detect(video).then(function (codes) {
+            if (!refs.parado && codes && codes.length && codes[0].rawValue) onCodigo(codes[0].rawValue);
+            if (!refs.parado) requestAnimationFrame(loop);
+          }).catch(function () { if (!refs.parado) requestAnimationFrame(loop); });
+        })();
+      }, onError);
       return;
     }
-    var stream = null, activo = true, lectorZX = null;
+    cargarZXing().then(function () {
+      if (refs.parado) return;
+      if (onListo) onListo();
+      refs.lector = new ZXing.BrowserMultiFormatReader();
+      refs.lector.decodeFromConstraints({ video: { facingMode: "environment" } }, video, function (res) {
+        if (res && !refs.parado) onCodigo(res.getText());
+      }).catch(onError);
+    }, onError);
+  }
+  function pararLectura(refs) {
+    refs.parado = true;
+    if (refs.lector) { try { refs.lector.reset(); } catch (e) { } }
+    if (refs.stream) refs.stream.getTracks().forEach(function (t) { t.stop(); });
+  }
+  /* pitido corto de confirmación (sin archivos de audio) */
+  function pip() {
+    try {
+      var ctx = pip._ctx || (pip._ctx = new (window.AudioContext || window.webkitAudioContext)());
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = 1250;
+      g.gain.value = 0.08;
+      o.connect(g); g.connect(ctx.destination);
+      o.start();
+      o.stop(ctx.currentTime + 0.09);
+    } catch (e) { }
+  }
+
+  App.escanear = function (alLeer) {
+    var refs = { parado: false };
+    var remoto = null;
     var s = App.sheet({
       titulo: "📷 Escanear código",
       cuerpo: '<video id="esc-video" playsinline muted autoplay style="width:100%;max-height:320px;border-radius:14px;background:#000"></video>' +
-        '<div class="chart-note" id="esc-nota">Apunta al código de barras o QR — se lee solo.</div>',
+        '<div class="chart-note" id="esc-nota">Apunta al código de barras o QR — se lee solo.</div>' +
+        (App.MODO_NUBE ? '<div class="small muted" style="margin-top:8px">📱 O usa tu celular como pistola: abre la app en el teléfono → Más → <b>Escáner remoto</b>. Lo que escanees allá cae aquí.</div>' : ""),
       alCerrar: function () {
-        activo = false;
-        if (lectorZX) { try { lectorZX.reset(); } catch (e) { } }
-        if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+        pararLectura(refs);
+        if (remoto) { try { App.sb.removeChannel(remoto); } catch (e) { } }
       }
     });
-    var video = App.$("#esc-video", s.el);
     function encontrado(codigo) {
-      if (!activo || !codigo) return;
-      activo = false;
-      if (lectorZX) { try { lectorZX.reset(); } catch (e) { } }
-      if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+      if (refs.parado || !codigo) return;
       s.cerrar();
-      alLeer(codigo);
+      alLeer(String(codigo));
     }
-
-    /* Ruta 1: BarcodeDetector nativo (Android/Chrome) */
-    if ("BarcodeDetector" in window) {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function (st) {
-        stream = st;
-        video.srcObject = st;
-        video.play();
-        var det = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "qr_code"] });
-        (function loop() {
-          if (!activo) return;
-          det.detect(video).then(function (codes) {
-            if (codes && codes.length && codes[0].rawValue) { encontrado(codes[0].rawValue); return; }
-            requestAnimationFrame(loop);
-          }).catch(function () { if (activo) requestAnimationFrame(loop); });
-        })();
-      }).catch(function () {
-        s.cerrar();
-        App.toast("La cámara no está disponible — revisa el permiso de cámara del navegador.", "err");
-      });
+    /* receptor remoto: mientras este sheet está abierto, lo que escanee el
+       celular de la misma cuenta cae aquí (canal realtime por usuario) */
+    if (App.MODO_NUBE && App.sb && App.auth.user) {
+      remoto = App.sb.channel("escaner-" + App.auth.user.id);
+      remoto.on("broadcast", { event: "codigo" }, function (msg) {
+        if (msg && msg.payload && msg.payload.codigo) encontrado(msg.payload.codigo);
+      }).subscribe();
+    }
+    var video = App.$("#esc-video", s.el);
+    var nota = App.$("#esc-nota", s.el);
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      video.style.display = "none";
+      if (nota) nota.textContent = App.MODO_NUBE
+        ? "Esta computadora no tiene cámara — escanea con el celular (Más → Escáner remoto) o usa una pistola USB."
+        : "Sin cámara en este entorno — usa una pistola lectora o escribe el código.";
       return;
     }
-
-    /* Ruta 2: motor ZXing (iPhone y navegadores sin API nativa) */
-    var nota = App.$("#esc-nota", s.el);
-    if (nota) nota.textContent = "Cargando el lector…";
-    cargarZXing().then(function () {
-      if (!activo) return;
+    if (!("BarcodeDetector" in window) && nota) nota.textContent = "Cargando el lector…";
+    iniciarLectura(video, encontrado, function () {
+      video.style.display = "none";
+      if (nota) nota.textContent = App.MODO_NUBE
+        ? "La cámara no abrió aquí — escanea con el celular (Más → Escáner remoto) o revisa el permiso de cámara."
+        : "La cámara no está disponible — usa una pistola lectora o escribe el código.";
+    }, refs, function () {
       if (nota) nota.textContent = "Apunta al código de barras o QR — se lee solo.";
-      lectorZX = new ZXing.BrowserMultiFormatReader();
-      lectorZX.decodeFromConstraints({ video: { facingMode: "environment" } }, video, function (res) {
-        if (res && activo) encontrado(res.getText());
-      }).catch(function () {
-        if (!activo) return;
-        s.cerrar();
-        App.toast("La cámara no está disponible — revisa el permiso de cámara del navegador.", "err");
-      });
-    }, function () {
-      if (!activo) return;
+    });
+  };
+
+  /* el celular como pistola de la computadora: escanea en modo continuo y
+     transmite cada código por el canal realtime de la cuenta */
+  App.escanearRemoto = function () {
+    if (!App.MODO_NUBE || !App.sb || !App.auth.user) {
+      App.toast("El escáner remoto funciona en la versión online", "err");
+      return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      App.toast("Este dispositivo no tiene cámara disponible", "err");
+      return;
+    }
+    var refs = { parado: false };
+    var canal = App.sb.channel("escaner-" + App.auth.user.id);
+    canal.subscribe();
+    var enviados = 0, ultimo = "", ultimoT = 0;
+    var s = App.sheet({
+      titulo: "📱 Escáner para la computadora",
+      cuerpo: '<video id="escr-video" playsinline muted autoplay style="width:100%;max-height:300px;border-radius:14px;background:#000"></video>' +
+        '<div class="chart-note" id="escr-nota">Cada código que leas aparece al instante en el escáner abierto en la computadora. Puedes escanear varios seguidos.</div>' +
+        '<div class="kpi-value num" id="escr-cont" style="text-align:center;margin-top:8px;font-size:17px">0 enviados</div>',
+      pie: '<button class="btn primary" data-listo>Listo</button>',
+      alCerrar: function () {
+        pararLectura(refs);
+        try { App.sb.removeChannel(canal); } catch (e) { }
+      }
+    });
+    App.$("[data-listo]", s.foot).addEventListener("click", function () { s.cerrar(); });
+    var video = App.$("#escr-video", s.el);
+    var nota = App.$("#escr-nota", s.el);
+    function leido(codigo) {
+      if (refs.parado || !codigo) return;
+      codigo = String(codigo);
+      var ahora = Date.now();
+      if (codigo === ultimo && ahora - ultimoT < 2500) return; /* la cámara repite el mismo código muchas veces por segundo */
+      ultimo = codigo; ultimoT = ahora;
+      enviados++;
+      canal.send({ type: "broadcast", event: "codigo", payload: { codigo: codigo } });
+      var c = App.$("#escr-cont", s.el);
+      if (c) c.textContent = enviados + " enviado" + (enviados === 1 ? "" : "s") + " · último: " + codigo;
+      if (navigator.vibrate) { try { navigator.vibrate(60); } catch (e) { } }
+      pip();
+    }
+    if (!("BarcodeDetector" in window) && nota) nota.textContent = "Cargando el lector…";
+    iniciarLectura(video, leido, function () {
       s.cerrar();
-      App.toast("No se pudo descargar el lector — revisa tu internet e intenta de nuevo.", "err");
+      App.toast("La cámara no está disponible — revisa el permiso de cámara del navegador.", "err");
+    }, refs, function () {
+      if (nota) nota.textContent = "Cada código que leas aparece al instante en la computadora. Puedes escanear varios seguidos.";
     });
   };
 
