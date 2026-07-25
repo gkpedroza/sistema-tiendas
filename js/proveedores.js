@@ -68,7 +68,7 @@ window.App = window.App || {};
           (pr.contacto ? '<div class="row-sub">Contacto: ' + App.esc(pr.contacto) + (pr.wechat ? " · WeChat: " + App.esc(pr.wechat) : "") + "</div>" : "") +
           (pr.direccion ? '<div class="row-sub">📍 ' + App.esc(pr.direccion) + "</div>" : "") +
           (pr.productos ? '<div class="small" style="margin-top:6px">' + App.esc(pr.productos) + "</div>" : "") +
-          (pr.notas ? '<div class="small muted" style="margin-top:4px">💡 ' + App.esc(pr.notas) + "</div>" : "") +
+          (pr.notas ? '<div class="small muted texto-largo" style="margin-top:4px">💡 ' + App.esc(pr.notas) + "</div>" : "") +
           '<div class="flex wrap" style="gap:8px;margin-top:10px">' +
           (pr.telefono ? '<a class="btn sm wa" target="_blank" rel="noopener" href="' + App.waLink(pr.telefono) + '" data-stop>' + App.icon("wa") + " WhatsApp</a>" : "") +
           (pr.url ? '<a class="btn sm ghost" target="_blank" rel="noopener" href="' + App.esc(pr.url) + '" data-stop>🔗 Ver tienda</a>' : "") +

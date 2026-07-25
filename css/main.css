@@ -1022,6 +1022,13 @@ body:has(#dock.hidden) .toast-stack { bottom: calc(14px + env(safe-area-inset-bo
 .toast-stack { bottom: calc(var(--kb, 0px) + var(--dock-h) + 14px); }
 body:has(#dock.hidden) .toast-stack { bottom: calc(var(--kb, 0px) + 14px + env(safe-area-inset-bottom, 0px)); }
 
+/* textos largos escritos a mano (descripciones, notas): conservan los saltos de
+   línea y los renglones en blanco tal como se pegaron */
+.texto-largo {
+  white-space: pre-line;
+  line-height: 1.55;
+}
+
 /* ===== carrusel de fotos (snap + escala, estilo app) ===== */
 .carrusel {
   display: flex; gap: 10px;

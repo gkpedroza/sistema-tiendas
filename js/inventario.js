@@ -255,7 +255,7 @@ window.App = window.App || {};
 
     cuerpo += '<div class="spread"><div class="prod-price num" style="font-size:22px">' + App.fmt.usd(p.precio) +
       '</div><div class="small muted num">' + App.fmt.bs(C.bsDe(p.precio)) + " (tasa € hoy)</div></div>";
-    if (p.descripcion) cuerpo += '<p class="small muted">' + App.esc(p.descripcion) + "</p>";
+    if (p.descripcion) cuerpo += '<p class="small muted texto-largo">' + App.esc(p.descripcion) + "</p>";
 
     /* stock */
     cuerpo += '<hr class="divider"><div class="spread"><h3>🧮 Stock</h3><span class="pill ' +

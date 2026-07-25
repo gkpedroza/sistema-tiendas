@@ -129,6 +129,7 @@ window.App = window.App || {};
      abierto (como cualquier app moderna) en vez de salir de la página. */
   var pilaSheets = [];
   var popIgnorar = 0;
+  var backPendiente = null; /* retroceso diferido: ver App.sheet */
   window.addEventListener("popstate", function (e) {
     if (popIgnorar > 0) { popIgnorar--; return; }
     var top = pilaSheets[pilaSheets.length - 1];
@@ -165,7 +166,13 @@ window.App = window.App || {};
 
     var api = null;
     var enHistoria = false;
-    try { history.pushState({ ljtSheet: true }, ""); enHistoria = true; } catch (eH) { }
+    if (backPendiente) {
+      /* un sheet se acaba de cerrar y su entrada de historial sigue viva: la hereda este
+         (patrón cerrar-y-reabrir de los steppers) en vez de apilar otra y descuadrar el atrás */
+      clearTimeout(backPendiente); backPendiente = null; enHistoria = true;
+    } else {
+      try { history.pushState({ ljtSheet: true }, ""); enHistoria = true; } catch (eH) { }
+    }
 
     /* teclado en pantalla: el sheet sube para que el pie (Guardar) no quede tapado
        y encoge para que su cabecera (título + X) no se salga por arriba */
@@ -194,8 +201,15 @@ window.App = window.App || {};
       setTimeout(function () { bd.remove(); }, 380);
       if (opts.alCerrar) opts.alCerrar(res);
       if (enHistoria && !porPop) {
-        popIgnorar++;
-        try { history.back(); } catch (eB) { popIgnorar--; }
+        clearTimeout(backPendiente);
+        backPendiente = setTimeout(function () {
+          backPendiente = null;
+          /* si la entrada de arriba ya no es de un sheet, retroceder sacaría al usuario
+             de la vista (era el salto a Inicio al cerrar una ficha) */
+          if (!history.state || !history.state.ljtSheet) return;
+          popIgnorar++;
+          try { history.back(); } catch (eB) { popIgnorar--; }
+        }, 0);
       }
     }
     bd.addEventListener("click", function (e) { if (e.target === bd) cerrar(); });
