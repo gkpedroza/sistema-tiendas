@@ -273,7 +273,7 @@ window.App = window.App || {};
       (stock <= 0 ? "danger" : stock <= (p.stockMin || 0) ? "warn" : "ok") + '">' + stock + " unidades</span></div>";
     if (p.tallas && p.tallas.length) {
       cuerpo += '<div class="list">' + p.tallas.map(function (t, i) {
-        return '<div class="row-item static"><div class="row-main"><div class="row-title">Talla ' + App.esc(t.talla) + "</div></div>" +
+        return '<div class="row-item static"><div class="row-main"><div class="row-title">' + App.varInfo(p).s + " " + App.esc(t.talla) + "</div></div>" +
           '<span class="stepper"><button data-st-menos="' + i + '">−</button><span>' + t.stock + '</span><button data-st-mas="' + i + '">+</button></span></div>';
       }).join("") + "</div>";
     } else {
@@ -398,7 +398,7 @@ window.App = window.App || {};
   function formProducto(orig) {
     var FP = orig ? JSON.parse(JSON.stringify(orig)) : {
       id: null, sku: "", codigoBarras: "", nombre: "", emoji: "🧸", tienda: "ljt", categoria: App.db.settings.categorias[0],
-      genero: "unisex", descripcion: "", tallas: null, stock: 0, stockMin: 2,
+      genero: "unisex", descripcion: "", tallas: null, tipoVariante: "talla", stock: 0, stockMin: 2,
       costoChina: 0, flete: 0, costoAds: 0, presupuestoAds: 0, precio: 0, fotos: []
     };
     var conTallas = !!(FP.tallas && FP.tallas.length);
@@ -430,7 +430,7 @@ window.App = window.App || {};
         '<div class="field"><label>Precio de venta (USD)</label><input class="input num" id="fp-precio" type="number" step="0.01" min="0" value="' + FP.precio + '"></div>' +
         '<div class="field full"><label>Descripción (se usa en la plantilla de WhatsApp)</label><textarea class="textarea" id="fp-desc">' + App.esc(FP.descripcion) + "</textarea></div>" +
         "</div>" +
-        '<hr class="divider"><div class="spread"><h3>📏 Tallas</h3><label class="flex small muted">Maneja tallas <span class="switch"><input type="checkbox" id="fp-con-tallas"' + (conTallas ? " checked" : "") + "><i></i></span></label></div>" +
+        '<hr class="divider"><div class="spread"><h3 id="fp-var-titulo">📏 Variantes</h3><label class="flex small muted">Maneja variantes <span class="switch"><input type="checkbox" id="fp-con-tallas"' + (conTallas ? " checked" : "") + "><i></i></span></label></div>" +
         '<div id="fp-tallas"></div>' +
         '<div class="form-grid" style="margin-top:8px">' +
         '<div class="field" id="fp-stock-wrap"><label>Stock</label><input class="input num" id="fp-stock" type="number" min="0" value="' + (FP.stock || 0) + '"></div>' +
@@ -477,15 +477,27 @@ window.App = window.App || {};
     function pintarTallas() {
       var box = App.$("#fp-tallas", s.el);
       var wrap = App.$("#fp-stock-wrap", s.el);
+      var titulo = App.$("#fp-var-titulo", s.el);
+      var vInfo = App.TIPOS_VARIANTE[FP.tipoVariante || "talla"] || App.TIPOS_VARIANTE.talla;
+      if (titulo) titulo.textContent = vInfo.emoji + " " + (conTallas ? vInfo.p : "Variantes");
       if (!conTallas) { box.innerHTML = ""; wrap.classList.remove("hidden"); return; }
       wrap.classList.add("hidden");
       FP.tallas = FP.tallas || [];
-      box.innerHTML = FP.tallas.map(function (t, i) {
-        return '<div class="flex" style="gap:8px;margin-bottom:6px">' +
-          '<input class="input" data-tn="' + i + '" value="' + App.esc(t.talla) + '" placeholder="Talla (ej: 4-6)" style="flex:2">' +
-          '<input class="input num" data-ts="' + i + '" type="number" min="0" value="' + t.stock + '" placeholder="Stock" style="flex:1">' +
-          '<button class="btn icon" data-tq="' + i + '">' + App.icon("x") + "</button></div>";
-      }).join("") + '<button class="btn sm ghost" id="fp-add-talla">+ Agregar talla</button>';
+      /* tipo de variante: define la etiqueta en TODO el sistema (ficha, venta, WhatsApp) */
+      box.innerHTML = '<div class="field" style="margin-bottom:8px"><label>¿Qué distingue cada variante?</label><div class="seg">' +
+        ["talla", "color", "modelo"].map(function (tp) {
+          return '<button type="button" class="seg-btn' + ((FP.tipoVariante || "talla") === tp ? " active" : "") + '" data-vtipo="' + tp + '">' +
+            App.TIPOS_VARIANTE[tp].emoji + " " + App.TIPOS_VARIANTE[tp].p + "</button>";
+        }).join("") + "</div></div>" +
+        FP.tallas.map(function (t, i) {
+          return '<div class="flex" style="gap:8px;margin-bottom:6px">' +
+            '<input class="input" data-tn="' + i + '" value="' + App.esc(t.talla) + '" placeholder="' + vInfo.s + ' (ej: ' + vInfo.ej + ')" style="flex:2">' +
+            '<input class="input num" data-ts="' + i + '" type="number" min="0" value="' + t.stock + '" placeholder="Stock" style="flex:1">' +
+            '<button class="btn icon" data-tq="' + i + '">' + App.icon("x") + "</button></div>";
+        }).join("") + '<button class="btn sm ghost" id="fp-add-talla">+ Agregar ' + vInfo.s.toLowerCase() + "</button>";
+      App.$$("[data-vtipo]", box).forEach(function (b) {
+        b.addEventListener("click", function () { FP.tipoVariante = b.dataset.vtipo; pintarTallas(); });
+      });
       App.$("#fp-add-talla", box).addEventListener("click", function () {
         FP.tallas.push({ talla: "", stock: 0 }); pintarTallas();
       });
@@ -548,9 +560,11 @@ window.App = window.App || {};
       }
       FP.precio = precio;
       FP.stockMin = parseInt(App.$("#fp-stockmin", s.el).value, 10) || 0;
+      FP.tipoVariante = FP.tipoVariante || "talla";
       if (conTallas) {
+        var vNombre = (App.TIPOS_VARIANTE[FP.tipoVariante] || App.TIPOS_VARIANTE.talla).s.toLowerCase();
         FP.tallas = (FP.tallas || []).filter(function (t) { return t.talla.trim(); });
-        if (!FP.tallas.length) { App.toast("Agrega al menos una talla o desactiva tallas", "err"); return; }
+        if (!FP.tallas.length) { App.toast("Agrega al menos un(a) " + vNombre + " o desactiva las variantes", "err"); return; }
         FP.stock = null;
       } else {
         FP.tallas = null;

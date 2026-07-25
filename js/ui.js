@@ -619,9 +619,22 @@ window.App = window.App || {};
     }
   }
 
+  /* ---------- variantes: cada producto elige si son tallas, colores o modelos ---------- */
+  App.TIPOS_VARIANTE = {
+    talla: { s: "Talla", p: "Tallas", emoji: "📏", ej: "4-6" },
+    color: { s: "Color", p: "Colores", emoji: "🎨", ej: "Azul" },
+    modelo: { s: "Modelo", p: "Modelos", emoji: "🧩", ej: "Transporte" }
+  };
+  App.varTipo = function (p) {
+    var t = (p && p.tipoVariante) || "talla";
+    return App.TIPOS_VARIANTE[t] ? t : "talla";
+  };
+  App.varInfo = function (p) { return App.TIPOS_VARIANTE[App.varTipo(p)]; };
+
   /* ---------- plantilla WhatsApp de producto ---------- */
   App.textoProducto = function (p) {
     var t = App.tienda(p.tienda);
+    var vInfo = App.varInfo(p);
     var tallasCon = p.tallas && p.tallas.length
       ? p.tallas.filter(function (x) { return +x.stock > 0; }).map(function (x) { return x.talla; }).join(", ")
       : "";
@@ -631,7 +644,7 @@ window.App = window.App || {};
       .replace(/{{descripcion}}/g, p.descripcion || "")
       .replace(/{{precio_usd}}/g, nfUsd.format(p.precio))
       .replace(/{{precio_bs}}/g, nfBs.format(Math.round(App.calc.bsDe(p.precio))))
-      .replace(/{{tallas_linea}}/g, tallasCon ? "📏 Tallas disponibles: " + tallasCon + "\n" : "")
+      .replace(/{{tallas_linea}}/g, tallasCon ? vInfo.emoji + " " + vInfo.p + " disponibles: " + tallasCon + "\n" : "")
       .replace(/{{tallas}}/g, tallasCon || "única")
       .replace(/{{tienda}}/g, t ? t.nombre : "")
       .replace(/{{categoria}}/g, p.categoria || "");
