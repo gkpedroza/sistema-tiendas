@@ -722,7 +722,9 @@ html[data-theme="dark"] .sheet-backdrop { background: rgba(0, 0, 0, 0.38); }
   flex: none;
 }
 .sheet-head h2 { flex: 1; font-size: 17.5px; }
-.sheet-body { padding: 2px 18px 26px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+/* pan-x además de pan-y: si no, el carrusel de fotos y las tablas anchas de
+   dentro del sheet no se pueden deslizar con el dedo (el ancestro manda) */
+.sheet-body { padding: 2px 18px 26px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-x pan-y; }
 .sheet-body > * + * { margin-top: 14px; }
 .sheet-foot {
   padding: 12px 18px calc(14px + env(safe-area-inset-bottom));
@@ -974,6 +976,13 @@ table.mini tr:last-child td { border-bottom: 0; }
 .btn.sm::after, .chip::after, .seg-btn::after, .tab::after, .stepper button::after {
   content: ""; position: absolute; inset: -6px; border-radius: inherit;
 }
+/* en seg y tabs los controles casi se tocan: sin recorte lateral, el área invisible
+   del siguiente se comería el borde del anterior */
+.seg-btn::after, .tab::after { inset: -6px 0; }
+
+/* el interruptor (candado de precios) es el único que no vive en una fila grande */
+.switch { position: relative; }
+.switch::after { content: ""; position: absolute; inset: -8px -4px; }
 
 /* doble-tap en controles no hace zoom de página (iOS) */
 .btn, .chip, .seg-btn, .tab, .dock-item, .row-item, .stepper button, .fab, .kpi, .switch { touch-action: manipulation; }
@@ -987,9 +996,13 @@ table.mini tr:last-child td { border-bottom: 0; }
 /* el sheet a máxima altura no roza la Dynamic Island */
 .sheet { max-height: calc(100dvh - max(42px, env(safe-area-inset-top, 0px) + 12px)); }
 
-/* fallbacks para iOS viejos (sin dvh / sin overflow clip) */
+/* fallbacks para iOS viejos (sin dvh / sin overflow clip).
+   Solo en body: ponerlo en html rompe position:sticky y el scroll al input enfocado */
 .login-screen { min-height: 100vh; min-height: 100dvh; }
-html, body { overflow-x: hidden; }
+body { overflow-x: hidden; }
+@supports (overflow: clip) {
+  body { overflow-x: clip; }
+}
 
 /* tablet vertical (700-900px): aprovechar el ancho en vez de columna única gigante */
 @media (min-width: 700px) and (max-width: 900px) {
@@ -1004,6 +1017,10 @@ html, body { overflow-x: hidden; }
 
 /* toasts del login: sin dock visible bajan al borde */
 body:has(#dock.hidden) .toast-stack { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+
+/* con el teclado abierto los avisos suben: si no, la validación queda invisible */
+.toast-stack { bottom: calc(var(--kb, 0px) + var(--dock-h) + 14px); }
+body:has(#dock.hidden) .toast-stack { bottom: calc(var(--kb, 0px) + 14px + env(safe-area-inset-bottom, 0px)); }
 
 /* ===== carrusel de fotos (snap + escala, estilo app) ===== */
 .carrusel {
@@ -1026,12 +1043,15 @@ body:has(#dock.hidden) .toast-stack { bottom: calc(14px + env(safe-area-inset-bo
   box-shadow: 0 10px 28px rgba(20, 20, 40, 0.12);
 }
 .carrusel-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.carrusel-dots { display: flex; gap: 6px; justify-content: center; margin-top: 10px; }
+.carrusel-dots { display: flex; gap: 14px; justify-content: center; margin-top: 10px; }
 .carrusel-dot {
+  position: relative;
   width: 6px; height: 6px; border-radius: 99px; border: 0; padding: 0;
   background: var(--ink-3); opacity: 0.35; cursor: pointer;
   transition: width 0.25s var(--ease), opacity 0.25s var(--ease), background 0.25s var(--ease);
 }
+/* los puntos son de 6px por diseño: el área tocable va aparte */
+.carrusel-dot::after { content: ""; position: absolute; inset: -14px -7px; }
 .carrusel-dot.active { width: 20px; opacity: 1; background: var(--c1); }
 
 /* ===== navegación fluida tipo app (20-jul) ===== */
@@ -1132,7 +1152,9 @@ body::before { transform: translateZ(0); } /* la aurora vive en su propia capa *
 .sheet-foot { flex-wrap: wrap; }                  /* 4 botones en el pie del sheet caben a 360px */
 .row-title.wrap { white-space: normal; }          /* filas con pills de urgencia no se amputan */
 .kpi-foot { flex-wrap: wrap; }
-.input[type="date"], .input[type="time"] { min-height: 42px; }
+/* alto mínimo cómodo aunque el estilo inline reduzca el padding (precio por línea,
+   talla, tasa…): el min-height gana sin tener que tocar cada sitio */
+.input, .select { min-height: 42px; }
 @media (max-width: 900px) {
   :root { --dock-h: calc(78px + env(safe-area-inset-bottom)); } /* altura real del dock en iPhone */
   .dock {

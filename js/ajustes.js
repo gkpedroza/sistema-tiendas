@@ -24,6 +24,8 @@ window.App = window.App || {};
         cuerpo: '<p class="small muted">1) Abre <b>Google Authenticator</b> (o 1Password / Authy) y escanea este código:</p>' +
           '<img id="fa-qr" alt="QR" style="width:190px;margin:10px auto;display:block;background:#fff;padding:10px;border-radius:14px">' +
           '<div class="small muted" style="text-align:center;word-break:break-all">clave manual: <span class="num">' + App.esc(f.totp.secret) + "</span></div>" +
+          '<button class="btn sm ghost block" id="fa-copiar" style="margin-top:6px">📋 Copiar clave</button>' +
+          '<div class="small muted" style="text-align:center;margin-top:4px">Si el autenticador está en este mismo teléfono, copia la clave y pégala allí (el QR es para escanear desde otro aparato).</div>' +
           '<div class="field" style="margin-top:12px"><label>2) Escribe el código de 6 dígitos que te muestra la app</label>' +
           '<input class="input num" id="fa-cod" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>',
         pie: '<button class="btn primary" data-ok>Verificar y activar</button>',
@@ -33,6 +35,9 @@ window.App = window.App || {};
       });
       /* el QR llega como data-URI con comillas dentro: se asigna por DOM, nunca interpolado en el HTML */
       App.$("#fa-qr", s.el).src = f.totp.qr_code;
+      App.$("#fa-copiar", s.el).addEventListener("click", function () {
+        App.copiar(f.totp.secret, "Clave copiada — pégala en tu autenticador");
+      });
       function verificarAlta() {
         var code = App.$("#fa-cod", s.el).value.trim();
         if (code.length !== 6) { App.toast("El código tiene 6 dígitos", "err"); return; }

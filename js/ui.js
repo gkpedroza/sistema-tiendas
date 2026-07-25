@@ -167,19 +167,27 @@ window.App = window.App || {};
     var enHistoria = false;
     try { history.pushState({ ljtSheet: true }, ""); enHistoria = true; } catch (eH) { }
 
-    /* teclado en pantalla: el sheet sube para que el pie (Guardar) no quede tapado */
+    /* teclado en pantalla: el sheet sube para que el pie (Guardar) no quede tapado
+       y encoge para que su cabecera (título + X) no se salga por arriba */
     var vv = window.visualViewport || null;
     function ajusteTeclado() {
       var oculto = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
       bd.style.paddingBottom = oculto ? oculto + "px" : "";
+      sheet.style.maxHeight = oculto ? "calc(100dvh - " + (oculto + 42) + "px)" : "";
     }
-    if (vv) vv.addEventListener("resize", ajusteTeclado);
+    if (vv) {
+      vv.addEventListener("resize", ajusteTeclado);
+      vv.addEventListener("scroll", ajusteTeclado); /* con el teclado abierto solo salta scroll */
+    }
 
     var cerrado = false;
     function cerrar(res, porPop) {
       if (cerrado) return; cerrado = true;
       pilaSheets = pilaSheets.filter(function (x) { return x !== api; });
-      if (vv) vv.removeEventListener("resize", ajusteTeclado);
+      if (vv) {
+        vv.removeEventListener("resize", ajusteTeclado);
+        vv.removeEventListener("scroll", ajusteTeclado);
+      }
       document.removeEventListener("keydown", onKey);
       bd.classList.add("closing"); bd.classList.remove("open");
       document.body.style.overflow = "";

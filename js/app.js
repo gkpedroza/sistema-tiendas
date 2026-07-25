@@ -7,7 +7,7 @@ window.App = window.App || {};
   "use strict";
 
   var MODS = [];
-  var rutaActual = "dashboard";
+  var rutaActual = null; /* null = aún no se pintó nada: el primer render va sin transición */
 
   function modulos() {
     if (!MODS.length) {
@@ -274,6 +274,9 @@ window.App = window.App || {};
           var tecladoAbierto = vv.height < window.innerHeight - 120;
           var dock = App.$("#dock");
           if (dock) dock.style.visibility = tecladoAbierto ? "hidden" : "";
+          /* --kb = alto del teclado: los avisos suben por encima de él */
+          document.documentElement.style.setProperty("--kb",
+            (tecladoAbierto ? Math.round(window.innerHeight - vv.height - vv.offsetTop) : 0) + "px");
           if (!tecladoAbierto) window.scrollTo(window.scrollX, window.scrollY);
         }, 80);
       };
