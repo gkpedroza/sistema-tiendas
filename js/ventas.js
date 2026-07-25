@@ -332,7 +332,7 @@ window.App = window.App || {};
       App.copiar(e.guia.numero, "Número de guía copiado");
     });
     if (q("[data-foto-guia]")) q("[data-foto-guia]").addEventListener("click", function () {
-      App.sheet({ titulo: "🧾 Guía", cuerpo: '<img src="' + e.guia.foto + '" style="width:100%;border-radius:14px">' });
+      App.sheet({ titulo: "🧾 Guía", cuerpo: '<img src="' + App.esc(e.guia.foto) + '" style="width:100%;border-radius:14px">' });
     });
     q("[data-wa-res]").addEventListener("click", function () {
       App.copiar(App.ventaResumenWA(v), "Resumen copiado — pégalo en WhatsApp");

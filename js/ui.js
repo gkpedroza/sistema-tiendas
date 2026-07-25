@@ -470,7 +470,7 @@ window.App = window.App || {};
     /* receptor remoto: mientras este sheet está abierto, lo que escanee el
        celular de la misma cuenta cae aquí (canal realtime por usuario) */
     if (App.MODO_NUBE && App.sb && App.auth.user) {
-      remoto = App.sb.channel("escaner-" + App.auth.user.id);
+      remoto = App.sb.channel("escaner-" + App.auth.user.id, { config: { private: true } });
       remoto.on("broadcast", { event: "codigo" }, function (msg) {
         if (msg && msg.payload && msg.payload.codigo) encontrado(msg.payload.codigo);
       }).subscribe();
@@ -507,7 +507,7 @@ window.App = window.App || {};
       return;
     }
     var refs = { parado: false };
-    var canal = App.sb.channel("escaner-" + App.auth.user.id);
+    var canal = App.sb.channel("escaner-" + App.auth.user.id, { config: { private: true } });
     canal.subscribe();
     var enviados = 0, ultimo = "", ultimoT = 0;
     var s = App.sheet({
