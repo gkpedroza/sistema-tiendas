@@ -53,7 +53,7 @@ window.App = window.App || {};
       "</div>";
     if (e.guia && e.guia.numero) {
       html += '<div class="flex" style="margin-top:8px;gap:8px">' +
-        (e.guia.foto ? '<img src="' + e.guia.foto + '" class="thumb" data-ver-guia="' + v.id + '" style="cursor:zoom-in">' : '<div class="thumb">🧾</div>') +
+        (e.guia.foto ? '<img src="' + App.esc(e.guia.foto) + '" class="thumb" data-ver-guia="' + App.esc(v.id) + '" style="cursor:zoom-in">' : '<div class="thumb">🧾</div>') +
         '<div style="flex:1;min-width:0"><div class="row-title num">' + App.esc(e.guia.numero) + '</div><div class="row-sub">despachado ' + App.fmt.fechaRel(e.guia.fecha) + "</div></div>" +
         '<button class="btn icon" data-copiar="' + App.esc(e.guia.numero) + '" title="Copiar guía">' + App.icon("copiar") + "</button>" +
         '<a class="btn icon" target="_blank" rel="noopener" href="' + trackUrl(e) + '" title="Rastrear en la web de la agencia">' + App.icon("buscar") + "</a></div>";
@@ -216,7 +216,7 @@ window.App = window.App || {};
       App.delegar(el, "click", "[data-ver-guia]", function (e, t) {
         var v = buscarVenta(t.dataset.verGuia);
         if (v && v.entrega.guia && v.entrega.guia.foto) {
-          App.sheet({ titulo: "🧾 Guía " + (v.entrega.guia.numero || ""), cuerpo: '<img src="' + v.entrega.guia.foto + '" style="width:100%;border-radius:14px">' });
+          App.sheet({ titulo: "🧾 Guía " + (v.entrega.guia.numero || ""), cuerpo: '<img src="' + App.esc(v.entrega.guia.foto) + '" style="width:100%;border-radius:14px">' });
         }
       });
       App.delegar(el, "click", "[data-detalle]", function (e, t) {
@@ -280,7 +280,7 @@ window.App = window.App || {};
       if (!f) return;
       App.comprimirImagen(f, 1000).then(function (data) {
         fotoData = data;
-        App.$("#g-preview", s.el).innerHTML = '<img src="' + data + '" style="width:100%;max-height:220px;object-fit:contain;border-radius:14px;background:var(--field-bg)">';
+        App.$("#g-preview", s.el).innerHTML = '<img src="' + App.esc(data) + '" style="width:100%;max-height:220px;object-fit:contain;border-radius:14px;background:var(--field-bg)">';
         fotoSubiendo = App.subirFoto(data, "guias").then(function (url) { fotoData = url; }, function () { });
       }, function () { App.toast("No se pudo leer la imagen", "err"); });
     });

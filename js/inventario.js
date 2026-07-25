@@ -80,7 +80,7 @@ window.App = window.App || {};
           h2 += '<div class="prod-card" data-prod="' + p.id + '">' +
             '<div class="prod-img ' + (p.fotos && p.fotos[0] ? "" : "thumb-" + p.tienda) + '"' +
             (p.fotos && p.fotos[0] ? "" : ' style="background:' + (p.tienda === "evz" ? "linear-gradient(135deg,rgba(10,132,255,.14),rgba(0,184,169,.12))" : "linear-gradient(135deg,rgba(232,67,143,.14),rgba(108,92,231,.12))") + '"') + ">" +
-            (p.fotos && p.fotos[0] ? '<img src="' + p.fotos[0] + '" alt="">' : p.emoji) +
+            (p.fotos && p.fotos[0] ? '<img src="' + App.esc(p.fotos[0]) + '" alt="">' : p.emoji) +
             App.pillTienda(p.tienda) +
             '<span class="pill stock-pill ' + stockCls + '">' + stock + " uds</span>" +
             "</div>" +
@@ -134,7 +134,7 @@ window.App = window.App || {};
         arr.forEach(function (st) {
           var p = st.producto;
           h += '<div class="row-item" data-prod="' + p.id + '">' +
-            '<div class="thumb ' + p.tienda + '">' + (p.fotos && p.fotos[0] ? '<img src="' + p.fotos[0] + '">' : p.emoji) + "</div>" +
+            '<div class="thumb ' + App.esc(p.tienda) + '">' + (p.fotos && p.fotos[0] ? '<img src="' + App.esc(p.fotos[0]) + '">' : p.emoji) + "</div>" +
             '<div class="row-main"><div class="row-title wrap" style="font-size:13px">' + App.esc(p.nombre) + " " + App.pillTienda(p.tienda) +
             ' <span class="pill ' + App.etiquetaProd.pill[st.etiqueta] + '">' + App.etiquetaProd.label[st.etiqueta] + "</span></div>" +
             '<div class="row-sub">' + st.unidades + " uds en " + st.ordenes + " órdenes · 1ª: " + (st.primera ? App.fmt.fecha(st.primera) : "—") +
@@ -415,7 +415,7 @@ window.App = window.App || {};
     function pintarFotos() {
       var box = App.$("#fp-fotos", s.el);
       box.innerHTML = (FP.fotos || []).map(function (f, i) {
-        return '<div style="position:relative"><img src="' + f + '" class="thumb" style="width:64px;height:64px">' +
+        return '<div style="position:relative"><img src="' + App.esc(f) + '" class="thumb" style="width:64px;height:64px">' +
           '<button class="btn icon" data-qf="' + i + '" style="position:absolute;top:-10px;right:-10px;width:40px;height:40px;border-radius:99px">' + App.icon("x") + "</button></div>";
       }).join("") +
         '<button class="btn icon" id="fp-add-foto" style="width:64px;height:64px;border-radius:12px">' + App.icon("camara") + "</button>";

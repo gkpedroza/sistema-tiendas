@@ -269,7 +269,7 @@ window.App = window.App || {};
       cuerpo += '<span class="pill ' + clsEstado + '">📦 ' + App.esc(ag ? ag.nombre : "Agencia") + " · " + lblEstado + "</span></div>";
       if (e.guia && e.guia.numero) {
         cuerpo += '<div class="row-item static">' +
-          (e.guia.foto ? '<img src="' + e.guia.foto + '" alt="guía" class="thumb" data-foto-guia style="cursor:zoom-in">' : '<div class="thumb">🧾</div>') +
+          (e.guia.foto ? '<img src="' + App.esc(e.guia.foto) + '" alt="guía" class="thumb" data-foto-guia style="cursor:zoom-in">' : '<div class="thumb">🧾</div>') +
           '<div class="row-main"><div class="row-title num">' + App.esc(e.guia.numero) + '</div><div class="row-sub">Guía · ' + App.fmt.fecha(e.guia.fecha) + "</div></div>" +
           '<button class="btn icon" data-copiar-guia>' + App.icon("copiar") + "</button></div>";
       } else {
@@ -617,7 +617,7 @@ window.App = window.App || {};
                 return '<option value="' + App.esc(t.talla) + '"' + (i.talla === t.talla ? " selected" : "") + ">" + App.esc(t.talla) + " (" + t.stock + ")</option>";
               }).join("") + "</select>";
           }
-          return '<div class="row-item static"><div class="thumb ' + (p ? p.tienda : "") + '">' + (p && p.fotos && p.fotos[0] ? '<img src="' + p.fotos[0] + '">' : (p ? p.emoji : "🛒")) + "</div>" +
+          return '<div class="row-item static"><div class="thumb ' + (p ? App.esc(p.tienda) : "") + '">' + (p && p.fotos && p.fotos[0] ? '<img src="' + App.esc(p.fotos[0]) + '">' : (p ? p.emoji : "🛒")) + "</div>" +
             '<div class="row-main"><div class="row-title">' + App.esc(i.nombre) + alerta + "</div>" +
             '<div class="flex wrap" style="margin-top:4px;gap:6px">' +
             '<span class="stepper"><button data-menos="' + ix + '">−</button><span>' + i.cant + '</span><button data-mas="' + ix + '">+</button></span>' +
@@ -655,7 +655,7 @@ window.App = window.App || {};
             (p.codigoBarras && String(p.codigoBarras).indexOf(t) >= 0);
         }).slice(0, 6);
         res.innerHTML = hits.map(function (p) {
-          return '<div class="row-item" data-add="' + p.id + '"><div class="thumb ' + p.tienda + '">' + (p.fotos && p.fotos[0] ? '<img src="' + p.fotos[0] + '">' : p.emoji) + "</div>" +
+          return '<div class="row-item" data-add="' + App.esc(p.id) + '"><div class="thumb ' + App.esc(p.tienda) + '">' + (p.fotos && p.fotos[0] ? '<img src="' + App.esc(p.fotos[0]) + '">' : p.emoji) + "</div>" +
             '<div class="row-main"><div class="row-title">' + App.esc(p.nombre) + '</div><div class="row-sub">Stock: ' + C().prodStock(p) + " · " + App.fmt.usd(p.precio) + "</div></div>" +
             App.pillTienda(p.tienda) + "</div>";
         }).join("") || '<div class="empty"><p>Sin resultados</p></div>';
