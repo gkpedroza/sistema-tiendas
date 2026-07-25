@@ -239,7 +239,18 @@ window.App = window.App || {};
     var costo = C.prodCosto(p);
     var anal = C.productosAnalisis().filter(function (x) { return x.producto.id === p.id; })[0];
 
+    /* navegación entre productos sin volver a la lista: respeta los filtros activos */
+    var vecinos = productosFiltrados();
+    var pos = vecinos.map(function (x) { return x.id; }).indexOf(p.id);
+    if (pos < 0) { vecinos = App.db.productos; pos = vecinos.map(function (x) { return x.id; }).indexOf(p.id); }
+
     var cuerpo = "";
+    if (vecinos.length > 1 && pos >= 0) {
+      cuerpo += '<div class="nav-prod">' +
+        '<button class="btn sm ghost" data-nav="-1"' + (pos === 0 ? " disabled" : "") + ">" + App.icon("chevL") + " Anterior</button>" +
+        '<span class="small muted num">' + (pos + 1) + " de " + vecinos.length + "</span>" +
+        '<button class="btn sm ghost" data-nav="1"' + (pos === vecinos.length - 1 ? " disabled" : "") + ">Siguiente " + App.icon("chevR") + "</button></div>";
+    }
     if (p.fotos && p.fotos.length) {
       cuerpo += App.carruselFotos(p.fotos, 260);
     } else {
@@ -333,6 +344,29 @@ window.App = window.App || {};
           '<button class="btn danger" data-borrar style="flex:0 0 auto">' + App.icon("basura") + "</button>" : "")
     });
     App.carruselInit(s.el);
+
+    /* saltar al producto anterior/siguiente (botones, y flechas del teclado en escritorio) */
+    function irA(delta) {
+      var otro = vecinos[pos + delta];
+      if (!otro) return;
+      document.removeEventListener("keydown", onFlechas);
+      s.cerrar();
+      detalleProducto(otro);
+    }
+    App.$$("[data-nav]", s.el).forEach(function (b) {
+      b.addEventListener("click", function () { irA(+b.dataset.nav); });
+    });
+    function onFlechas(e) {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      var abiertos = App.$$(".sheet-backdrop");
+      if (abiertos[abiertos.length - 1] !== s.el) return; /* solo la ficha de arriba */
+      var t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;
+      irA(e.key === "ArrowRight" ? 1 : -1);
+    }
+    document.addEventListener("keydown", onFlechas);
+    var cerrarOrig = s.cerrar;
+    s.cerrar = function () { document.removeEventListener("keydown", onFlechas); return cerrarOrig.apply(null, arguments); };
 
     function ajustar(i, delta) {
       if (i < 0) p.stock = Math.max(0, (+p.stock || 0) + delta);
