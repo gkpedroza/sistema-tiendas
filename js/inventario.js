@@ -268,19 +268,16 @@ window.App = window.App || {};
       '</div><div class="small muted num">' + App.fmt.bs(C.bsDe(p.precio)) + " (tasa € hoy)</div></div>";
     if (p.descripcion) cuerpo += '<p class="small muted texto-largo">' + App.esc(p.descripcion) + "</p>";
 
-    /* stock */
+    /* stock: solo lectura (se ajusta desde el lápiz ✏️ para evitar toques accidentales) */
     cuerpo += '<hr class="divider"><div class="spread"><h3>🧮 Stock</h3><span class="pill ' +
       (stock <= 0 ? "danger" : stock <= (p.stockMin || 0) ? "warn" : "ok") + '">' + stock + " unidades</span></div>";
     if (p.tallas && p.tallas.length) {
-      cuerpo += '<div class="list">' + p.tallas.map(function (t, i) {
+      cuerpo += '<div class="list">' + p.tallas.map(function (t) {
         return '<div class="row-item static"><div class="row-main"><div class="row-title">' + App.varInfo(p).s + " " + App.esc(t.talla) + "</div></div>" +
-          '<span class="stepper"><button data-st-menos="' + i + '">−</button><span>' + t.stock + '</span><button data-st-mas="' + i + '">+</button></span></div>';
+          '<span class="pill num ' + (+t.stock <= 0 ? "danger" : "") + '">' + t.stock + "</span></div>";
       }).join("") + "</div>";
-    } else {
-      cuerpo += '<div class="row-item static"><div class="row-main"><div class="row-sub">Ajuste rápido</div></div>' +
-        '<span class="stepper"><button data-st-menos="-1">−</button><span>' + (p.stock || 0) + '</span><button data-st-mas="-1">+</button></span></div>';
     }
-    cuerpo += '<div class="small muted">Alerta cuando quede ≤ ' + (p.stockMin || 0) + "</div>";
+    cuerpo += '<div class="small muted">Se ajusta desde ✏️ Editar · alerta cuando quede ≤ ' + (p.stockMin || 0) + "</div>";
 
     /* costos (súper) */
     if (esSuper) {
@@ -368,15 +365,7 @@ window.App = window.App || {};
     var cerrarOrig = s.cerrar;
     s.cerrar = function () { document.removeEventListener("keydown", onFlechas); return cerrarOrig.apply(null, arguments); };
 
-    function ajustar(i, delta) {
-      if (i < 0) p.stock = Math.max(0, (+p.stock || 0) + delta);
-      else p.tallas[i].stock = Math.max(0, (+p.tallas[i].stock || 0) + delta);
-      App.calc.registrarMov(p.id, i < 0 ? null : p.tallas[i].talla, delta, "ajuste", null, "ajuste manual en ficha");
-      App.save();
-      s.cerrar(); detalleProducto(p);
-    }
-    App.$$("[data-st-mas]", s.el).forEach(function (b) { b.addEventListener("click", function () { ajustar(+b.dataset.stMas, 1); }); });
-    App.$$("[data-st-menos]", s.el).forEach(function (b) { b.addEventListener("click", function () { ajustar(+b.dataset.stMenos, -1); }); });
+    /* (el ajuste de stock vive solo en ✏️ Editar: un toque accidental aquí descontaba unidades) */
 
     App.$("[data-wa]", s.el).addEventListener("click", function () {
       App.copiar(App.textoProducto(p), "Ficha copiada — pégala en WhatsApp o Instagram");
@@ -584,9 +573,30 @@ window.App = window.App || {};
         FP.creadoEl = App.hoyISO();
         App.db.productos.push(FP);
       }
+      registrarAjustesStock(orig, FP);
       App.save();
       App.toast(orig ? "Producto actualizado" : "Producto creado 🎉");
       s.cerrar(); App.render();
+    });
+  }
+
+  /* los cambios de stock hechos en el formulario quedan en el kardex como ajuste
+     (antes solo los registraban los botones +/− de la ficha, ya retirados) */
+  function registrarAjustesStock(orig, FP) {
+    var viejo = {};
+    if (orig) {
+      if (orig.tallas && orig.tallas.length) orig.tallas.forEach(function (t) { viejo[t.talla] = +t.stock || 0; });
+      else viejo[""] = +orig.stock || 0;
+    }
+    var nuevo = {};
+    if (FP.tallas && FP.tallas.length) FP.tallas.forEach(function (t) { nuevo[t.talla] = +t.stock || 0; });
+    else nuevo[""] = +FP.stock || 0;
+    var claves = {};
+    Object.keys(viejo).forEach(function (k) { claves[k] = 1; });
+    Object.keys(nuevo).forEach(function (k) { claves[k] = 1; });
+    Object.keys(claves).forEach(function (k) {
+      var delta = (nuevo[k] || 0) - (viejo[k] || 0);
+      if (delta) App.calc.registrarMov(FP.id, k || null, delta, "ajuste", null, orig ? "ajuste en edición" : "stock inicial");
     });
   }
 })();
