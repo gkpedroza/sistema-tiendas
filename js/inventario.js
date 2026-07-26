@@ -285,8 +285,8 @@ window.App = window.App || {};
       var conAds = costo + costoAds;
       var invertidoAds = C.adsDeProducto(p.id);
       cuerpo += '<hr class="divider"><h3>💰 Costos y margen</h3><div class="table-wrap"><table class="mini">' +
-        '<tr><td>Precio en China</td><td class="num">' + App.fmt.usd(p.costoChina) + "</td></tr>" +
-        '<tr><td>Flete China → Vzla</td><td class="num">' + App.fmt.usd(p.flete) + "</td></tr>" +
+        '<tr><td>Costo en China (unidad)</td><td class="num">' + App.fmt.usd(p.costoChina) + "</td></tr>" +
+        '<tr><td>Flete China → Vzla (unidad)</td><td class="num">' + App.fmt.usd(p.flete) + "</td></tr>" +
         '<tr><td><b>Costo puesto en Vzla</b></td><td class="num"><b>' + App.fmt.usd(costo) + "</b></td></tr>" +
         '<tr><td>Ads estimado por unidad</td><td class="num">' + App.fmt.usd(costoAds) + "</td></tr>" +
         '<tr><td><b>Costo total con ads</b></td><td class="num"><b>' + App.fmt.usd(conAds) + "</b></td></tr>" +
@@ -425,11 +425,15 @@ window.App = window.App || {};
         '<div class="field" id="fp-stock-wrap"><label>Stock</label><input class="input num" id="fp-stock" type="number" min="0" value="' + (FP.stock || 0) + '"></div>' +
         '<div class="field"><label>Alerta de stock (mínimo)</label><input class="input num" id="fp-stockmin" type="number" min="0" value="' + (FP.stockMin || 0) + '"></div></div>' +
         (App.auth.esSuper()
-          ? '<hr class="divider"><h3>💰 Costos (solo tú los ves)</h3><div class="form-grid" style="margin-top:8px">' +
-          '<div class="field"><label>Precio en China (USD)</label><input class="input num" id="fp-china" type="number" step="0.01" min="0" value="' + FP.costoChina + '"></div>' +
-          '<div class="field"><label>Flete China→Vzla (USD)</label><input class="input num" id="fp-flete" type="number" step="0.01" min="0" value="' + FP.flete + '"></div>' +
+          ? '<hr class="divider"><h3>💰 Costos (solo tú los ves)</h3>' +
+          '<p class="small muted">Los tres primeros son <b>por cada unidad</b>: lo que te cuesta UNA pieza puesta en Venezuela.</p>' +
+          '<div class="form-grid" style="margin-top:8px">' +
+          '<div class="field"><label>Costo por unidad en China (USD)</label><input class="input num" id="fp-china" type="number" step="0.01" min="0" value="' + FP.costoChina + '"></div>' +
+          '<div class="field"><label>Flete por unidad (USD)</label><input class="input num" id="fp-flete" type="number" step="0.01" min="0" value="' + FP.flete + '"></div>' +
+          '<div class="field full"><div class="small muted">💡 Si pagaste el flete por el lote completo, divídelo: $50 de flete por 20 piezas = <b>2,50</b> por unidad.</div></div>' +
           '<div class="field"><label>Ads estimado por unidad (USD)</label><input class="input num" id="fp-ads" type="number" step="0.01" min="0" value="' + (FP.costoAds || 0) + '"></div>' +
-          '<div class="field"><label>Presupuesto total de ads (USD, opcional)</label><input class="input num" id="fp-presu" type="number" step="1" min="0" value="' + (FP.presupuestoAds || 0) + '"></div></div>' +
+          '<div class="field"><label>Presupuesto total de ads (USD, opcional)</label><input class="input num" id="fp-presu" type="number" step="1" min="0" value="' + (FP.presupuestoAds || 0) + '"></div>' +
+          '<div class="field full"><div class="small muted">El presupuesto de ads NO es por unidad: es el total que piensas invertir en publicidad de este producto.</div></div></div>' +
           '<div class="small muted" id="fp-margen" style="margin-top:6px"></div>'
           : ""),
       pie: '<button class="btn primary" data-ok>' + (orig ? "Guardar cambios" : "Crear producto") + "</button>"
