@@ -1,5 +1,5 @@
 /* ============================================================
-   envios.js — despacho por agencia (guía + foto), motorizados
+   envios.js - despacho por agencia (guía + foto), motorizados
    Caracas con pago por carrera, y seguimiento de estados
    ============================================================ */
 window.App = window.App || {};
@@ -36,7 +36,7 @@ window.App = window.App || {};
         : "🏪 Retiro en tienda";
     var destino = e.destinoCiudad
       ? App.esc(e.destinoCiudad + (e.destinoEstado ? ", " + e.destinoEstado : ""))
-      : (cli ? App.esc((cli.ciudad || "") + (cli.estado ? ", " + cli.estado : "")) : "—");
+      : (cli ? App.esc((cli.ciudad || "") + (cli.estado ? ", " + cli.estado : "")) : "-");
     var estadoPill = '<span class="pill ' + (App.envioEstado.pill[e.estado] || "") + '">' + (App.envioEstado.label[e.estado] || e.estado) + "</span>";
     var retrasado = e.tipo !== "retiro" && (e.estado === "preparando" || e.estado === "por_llevar") &&
       v.fecha.slice(0, 10) <= App.toISO(App.addDays(new Date(), -2));
@@ -142,7 +142,7 @@ window.App = window.App || {};
           var desde = (v.entrega.guia && v.entrega.guia.fecha) || v.fecha.slice(0, 10);
           var diasFuera = Math.round((new Date(App.hoyISO()) - new Date(desde)) / 864e5);
           html += cardEnvio(v,
-            (diasFuera >= 3 ? '<span class="pill warn">❓ ' + diasFuera + " días — consulta a la agencia</span>" : "") +
+            (diasFuera >= 3 ? '<span class="pill warn">❓ ' + diasFuera + " días - consulta a la agencia</span>" : "") +
             '<button class="btn sm ok" data-entregado="' + v.id + '">✓ Llegó al cliente</button>');
         });
       } else if (tab === "entregados") {
@@ -200,7 +200,7 @@ window.App = window.App || {};
         var v = buscarVenta(t.dataset.armado);
         if (!v) return;
         v.entrega.estado = "por_llevar";
-        App.save(); App.toast("Pedido armado — listo para salir 🚚"); App.render();
+        App.save(); App.toast("Pedido armado - listo para salir 🚚"); App.render();
       });
       App.delegar(el, "click", "[data-cli]", function (e, t) {
         var c = App.cliente(t.dataset.cli);

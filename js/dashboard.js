@@ -1,5 +1,5 @@
 /* ============================================================
-   dashboard.js — Inicio: qué hay que hacer hoy + cómo va el mes
+   dashboard.js - Inicio: qué hay que hacer hoy + cómo va el mes
    ============================================================ */
 window.App = window.App || {};
 
@@ -42,7 +42,7 @@ window.App = window.App || {};
         var dias = C.diasHasta(f.fecha);
         var cuando = dias === 0 ? "¡es hoy!" : (dias === 1 ? "¡es mañana!" : "en " + dias + " días");
         alertas += '<div class="alert-item fest" data-ir="calendario"><span class="em">' + f.emoji + "</span><span><b>" +
-          App.esc(f.nombre) + "</b> " + cuando + " — prepara contenido y stock</span></div>";
+          App.esc(f.nombre) + "</b> " + cuando + " - prepara contenido y stock</span></div>";
       });
       if (stockBajo.length) {
         alertas += '<div class="alert-item warn" data-ir="inventario"><span class="em">⚠️</span><span><b>' +
@@ -54,7 +54,7 @@ window.App = window.App || {};
         if (dsr === null || dsr > 7) {
           alertas += '<div class="alert-item warn" data-respaldo><span class="em">💾</span><span><b>' +
             (dsr === null ? "Nunca has descargado un respaldo" : "Llevas " + dsr + " días sin respaldar") +
-            "</b> — toca aquí y se descarga solo</span></div>";
+            "</b> - toca aquí y se descarga solo</span></div>";
         }
       }
       if (alertas) html += '<div class="alert-strip">' + alertas + "</div>";
@@ -96,7 +96,7 @@ window.App = window.App || {};
           emoji: "🚢",
           html: "Pedido a <b>" + App.esc(prov ? prov.nombre : "proveedor") + "</b> " +
             (dl < 0 ? "debió llegar hace " + (-dl) + " días" : dl === 0 ? "llega HOY" : "llega en " + dl + " días") +
-            " — al recibirlo márcalo para sumar el stock",
+            " - al recibirlo márcalo para sumar el stock",
           ir: "proveedores", urgente: dl <= 0
         });
       });
@@ -138,7 +138,7 @@ window.App = window.App || {};
       if (App.auth.esSuper()) html += '<button class="btn ghost block" data-cierre style="margin-top:10px">🧾 Cierre de caja del día</button>';
       html += "</div>";
 
-      /* para despachar — arriba, con fecha objetivo y filtro por agencia */
+      /* para despachar - arriba, con fecha objetivo y filtro por agencia */
       var agsPend = {};
       pendEnvio.forEach(function (v) {
         var k = v.entrega.tipo === "motorizado" ? "moto" : (v.entrega.agenciaId || "otra");
@@ -200,7 +200,7 @@ window.App = window.App || {};
         "</div>";
 
       /* gráfica 30 días */
-      html += '<div class="card"><div class="card-head"><h2>📈 Ventas — últimos 30 días</h2></div><div class="chart-box" id="ch-30d"></div></div>';
+      html += '<div class="card"><div class="card-head"><h2>📈 Ventas - Últimos 30 días</h2></div><div class="chart-box" id="ch-30d"></div></div>';
 
       /* mosaico en dos columnas: cada tarjeta mide su contenido (sin huecos) */
       var colIzq = "", colDer = "";
@@ -220,7 +220,7 @@ window.App = window.App || {};
       cardTop += "</div>";
       colDer += cardTop;
 
-      /* tasa + caja Bs (solo súper) — SIEMPRE arriba de las columnas: es lo primero del día */
+      /* tasa + caja Bs (solo súper) - SIEMPRE arriba de las columnas: es lo primero del día */
       if (App.auth.esSuper()) {
         var caja = C.cajaBs();
         var tasas = C.tasaHoy();
@@ -266,7 +266,7 @@ window.App = window.App || {};
             if (v.pagos && v.pagos.length) return v.pagos.some(function (p) { return C.metodoGrupo(p.metodo) === d.label; });
             return C.metodoGrupo(v.metodoPago) === d.label;
           });
-          sheetVentasLista("💳 " + d.label + " — este mes", lista);
+          sheetVentasLista("💳 " + d.label + " - este mes", lista);
         }
       });
 
@@ -284,7 +284,7 @@ window.App = window.App || {};
               return p && p.tienda === d.tid;
             });
           });
-          sheetVentasLista("🏬 " + d.label + " — este mes", lista);
+          sheetVentasLista("🏬 " + d.label + " - este mes", lista);
         }
       });
       App.$("#lg-tienda").innerHTML =
@@ -310,7 +310,7 @@ window.App = window.App || {};
       var bResp = App.$("[data-respaldo]", el);
       if (bResp) bResp.addEventListener("click", function () {
         App.descargarRespaldo();
-        App.toast("Respaldo descargado 💾 — guárdalo en un lugar seguro");
+        App.toast("Respaldo descargado 💾 - guárdalo en un lugar seguro");
         App.render();
       });
       var bCierre = App.$("[data-cierre]", el);

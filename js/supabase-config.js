@@ -1,5 +1,5 @@
 /* ============================================================
-   supabase-config.js — conexión a la nube (Fase 2)
+   supabase-config.js - conexión a la nube (Fase 2)
    La publishable key es pública por diseño: la seguridad real
    la ponen las políticas RLS del servidor (solo usuarios con
    login pueden leer/escribir; kardex y auditoría inmutables).

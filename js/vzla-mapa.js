@@ -1,5 +1,5 @@
 /* ============================================================
-   vzla-mapa.js — siluetas de los estados de Venezuela (GENERADO)
+   vzla-mapa.js - siluetas de los estados de Venezuela (GENERADO)
    Fuente: geoBoundaries.org ADM1 (CC BY 3.0 IGO, www.geoboundaries.org)
    Proyección equirectangular simplificada. No editar a mano:
    se regenera con scratchpad/convert.js

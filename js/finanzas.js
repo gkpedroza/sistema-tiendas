@@ -1,5 +1,5 @@
 /* ============================================================
-   finanzas.js — resumen del mes, caja Bs + devaluación,
+   finanzas.js - resumen del mes, caja Bs + devaluación,
    tasas BCV, gastos/ads con ROAS y cuentas por pagar
    (módulo solo para el súper usuario)
    ============================================================ */
@@ -71,7 +71,7 @@ window.App = window.App || {};
       '<div class="chart-note">Equivalente en Bs a tasa de cobro (€): ' + App.fmt.bs(u.utilidadNeta * tasa) + "</div></div>";
 
     html += '<div class="grid-2 section-gap">' +
-      '<div class="card"><div class="card-head"><h2>📈 Ingresos — últimos 6 meses</h2></div><div class="chart-box" id="fin-ch-meses"></div></div>' +
+      '<div class="card"><div class="card-head"><h2>📈 Ingresos - Últimos 6 meses</h2></div><div class="chart-box" id="fin-ch-meses"></div></div>' +
       '<div class="card"><div class="card-head"><h2>🏬 Por tienda</h2><span class="pill">' + (mesOffset === 0 ? "este mes" : "mes pasado") + "</span></div>" +
       App.hbars([
         { label: "🧸 La Teacher", valor: Math.round(porTienda.ljt || 0), color: "var(--c1)" },
@@ -176,7 +176,7 @@ window.App = window.App || {};
     var html = '<div class="card"><div class="card-head"><h2>💱 Tasa BCV de hoy</h2>' +
       '<span class="pill">' + App.fmt.fechaRel(t.fecha) + "</span></div>" +
       '<div class="form-grid">' +
-      '<div class="field"><label>Euro (Bs/€) — con esta cobras</label><input class="input num" id="ts-eur" type="number" step="0.01" value="' + t.eur + '"></div>' +
+      '<div class="field"><label>Euro (Bs/€) - con esta cobras</label><input class="input num" id="ts-eur" type="number" step="0.01" value="' + t.eur + '"></div>' +
       '<div class="field"><label>Dólar (Bs/$)</label><input class="input num" id="ts-usd" type="number" step="0.01" value="' + t.usd + '"></div>' +
       "</div>" +
       '<div class="flex" style="margin-top:10px;gap:8px">' +
@@ -190,7 +190,7 @@ window.App = window.App || {};
       '<button class="seg-btn' + (App.db.settings.tasaCobro === "usd" ? " active" : "") + '" data-tc="usd">Dólar BCV</button></div>' +
       '<div class="chart-note">Precio en $ × tasa elegida = monto a cobrar en Bs. Hoy $10 = ' + App.fmt.bs(App.calc.bsDe(10)) + "</div></div>";
 
-    html += '<div class="card section-gap"><div class="card-head"><h2>📈 Evolución — últimos 14 días</h2></div>' +
+    html += '<div class="card section-gap"><div class="card-head"><h2>📈 Evolución - Últimos 14 días</h2></div>' +
       '<div class="chart-box" id="ts-chart"></div>' +
       '<div class="legend"><span class="legend-item"><span class="legend-dot" style="background:var(--c5)"></span>Euro</span>' +
       '<span class="legend-item"><span class="legend-dot" style="background:var(--c2)"></span>Dólar</span></div></div>';
@@ -256,7 +256,7 @@ window.App = window.App || {};
       '<div class="kpi"><div class="kpi-label">Ads IG este mes</div><div class="kpi-value" style="font-size:22px">' + App.fmt.usd0(roas.ads) + "</div>" +
       '<div class="kpi-foot">generaron ' + App.fmt.usd0(roas.ventasIg) + " por Instagram</div></div>" +
       '<div class="kpi"><div class="kpi-label">Retorno (ROAS)</div><div class="kpi-value' + (roas.roas != null && roas.roas < 1 ? "" : " grad") + '" style="font-size:22px">' +
-      (roas.roas == null ? "—" : App.fmt.num(roas.roas) + "×") + "</div>" +
+      (roas.roas == null ? "-" : App.fmt.num(roas.roas) + "×") + "</div>" +
       '<div class="kpi-foot">' + (roas.roas == null ? "sin inversión este mes" : (roas.roas >= 1 ? "cada $1 en ads produce $" + App.fmt.num(roas.roas) : "⚠️ los ads no se están pagando")) + "</div></div></div>";
 
     html += '<button class="btn primary block" id="btn-gasto" style="margin-bottom:12px">' + App.icon("plus") + " Registrar gasto / inversión en ads</button>";
@@ -653,7 +653,7 @@ window.App = window.App || {};
     var grupos = Object.keys(datos.porGrupo);
 
     var s = App.sheet({
-      titulo: "🧾 Cierre de caja — " + App.fmt.fechaRel(hoy),
+      titulo: "🧾 Cierre de caja - " + App.fmt.fechaRel(hoy),
       cuerpo: '<div class="table-wrap"><table class="mini">' +
         (grupos.length ? grupos.map(function (g) {
           return "<tr><td>" + App.esc(g) + (g === "Bolívares" ? " (≈ " + App.fmt.bs(Math.round(datos.porGrupo[g] * tasa)) + ")" : "") +
@@ -664,9 +664,9 @@ window.App = window.App || {};
         '<div class="chart-note">Incluye ventas pagadas hoy, abonos de hoy y deliveries cobrados por adelantado. Las devoluciones restan.</div>' +
         '<hr class="divider"><h3>¿Cuadra lo físico?</h3>' +
         '<div class="form-grid" style="margin-top:8px">' +
-        '<div class="field"><label>Efectivo contado (USD) — esperado ' + App.fmt.usd(espEf) + '</label>' +
+        '<div class="field"><label>Efectivo contado (USD) - esperado ' + App.fmt.usd(espEf) + '</label>' +
         '<input class="input num" id="ci-ef" type="number" step="0.01" value="' + (previo ? previo.contadoEfectivo : espEf.toFixed(2)) + '"></div>' +
-        '<div class="field"><label>Bs contados — esperado ' + App.fmt.bs(espBs) + '</label>' +
+        '<div class="field"><label>Bs contados - esperado ' + App.fmt.bs(espBs) + '</label>' +
         '<input class="input num" id="ci-bs" type="number" step="1" value="' + (previo ? previo.contadoBs : espBs) + '"></div>' +
         '<div class="field full"><label>Notas</label><input class="input" id="ci-notas" value="' + App.esc(previo ? previo.notas || "" : "") + '" placeholder="Ej: faltan $2, se usaron para el taxi"></div></div>' +
         '<div id="ci-dif" style="margin-top:8px"></div>',

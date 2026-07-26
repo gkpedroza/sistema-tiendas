@@ -1,5 +1,5 @@
 /* ============================================================
-   promos.js — bundles/promociones con análisis de rentabilidad
+   promos.js - bundles/promociones con análisis de rentabilidad
    ============================================================ */
 window.App = window.App || {};
 

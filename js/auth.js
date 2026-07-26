@@ -1,5 +1,5 @@
 /* ============================================================
-   auth.js — login demo, 2FA maqueta, sesión y permisos
+   auth.js - login demo, 2FA maqueta, sesión y permisos
    (la seguridad REAL llega en Fase 2: bcrypt+TOTP+passkeys)
    ============================================================ */
 window.App = window.App || {};
@@ -106,7 +106,7 @@ window.App = window.App || {};
           App.entrarConSesionBio(function () {
             b.disabled = false; b.textContent = "Entrar con Face ID / huella";
           });
-        }, function () { App.toast("No se pudo verificar — intenta de nuevo", "err"); });
+        }, function () { App.toast("No se pudo verificar - intenta de nuevo", "err"); });
       });
 
       App.$("#f-login-nube").addEventListener("submit", function (e) {
@@ -131,7 +131,7 @@ window.App = window.App || {};
             btn.disabled = false; btn.textContent = "Entrar";
           }
           /* segundos pasos en cadena: código TOTP (si la cuenta lo activó) y
-             Face ID (si este dispositivo lo tiene activo) — uno, el otro o ambos */
+             Face ID (si este dispositivo lo tiene activo) - uno, el otro o ambos */
           App.verificar2FASiHaceFalta(function () {
             App.exigirBioSiActivo(continuar, function () {
               cancelado();
@@ -244,21 +244,21 @@ window.App = window.App || {};
     var ses = null;
     try { ses = JSON.parse(localStorage.getItem("ljt_bio_ses")); } catch (e) { }
     if (!ses) {
-      App.toast("Entra con tu contraseña esta vez — el acceso con Face ID quedará listo para la próxima", "err");
+      App.toast("Entra con tu contraseña esta vez - el acceso con Face ID quedará listo para la próxima", "err");
       if (alFallar) alFallar();
       return;
     }
     App.sb.auth.setSession(ses).then(function (r) {
       if (r.error || !r.data || !r.data.session) {
         App.borrarSesionBio();
-        App.toast("El acceso guardado venció — entra con tu contraseña", "err");
+        App.toast("El acceso guardado venció - entra con tu contraseña", "err");
         if (alFallar) alFallar();
         App.renderLogin();
         return;
       }
       App.guardarSesionBio(r.data.session);
       App.iniciarNube(r.data.session).then(function () { App.iniciarApp(); }, function (e2) {
-        App.toast(e2 && e2.sinPerfil ? e2.message : "No se pudieron cargar los datos — revisa tu internet", "err");
+        App.toast(e2 && e2.sinPerfil ? e2.message : "No se pudieron cargar los datos - revisa tu internet", "err");
         if (alFallar) alFallar();
       });
     });
@@ -280,7 +280,7 @@ window.App = window.App || {};
         s.cerrar();
         alOk();
       }, function () {
-        if (!silencioso) App.toast("No se pudo verificar — intenta de nuevo", "err");
+        if (!silencioso) App.toast("No se pudo verificar - intenta de nuevo", "err");
       });
     }
     App.$("#bio-2p", s.el).addEventListener("click", function () { intentar(false); });
@@ -410,7 +410,7 @@ window.App = window.App || {};
     function intentar(silencioso) {
       App.pedirBiometria().then(function () { alOk(); }, function () {
         /* el intento automático puede fallar sin gesto del usuario (iOS): no asustar con toast */
-        if (!silencioso) App.toast("No se pudo verificar — toca Desbloquear para reintentar", "err");
+        if (!silencioso) App.toast("No se pudo verificar - toca Desbloquear para reintentar", "err");
       });
     }
     App.$("#btn-bio").addEventListener("click", function () { intentar(false); });
@@ -434,7 +434,7 @@ window.App = window.App || {};
       if (clave.length < 8) { App.toast("Mínimo 8 caracteres", "err"); return; }
       App.sb.auth.updateUser({ password: clave }).then(function (r) {
         if (r.error) { App.toast("No se pudo: " + r.error.message, "err"); return; }
-        App.toast("Contraseña actualizada ✓ — ya puedes entrar con ella");
+        App.toast("Contraseña actualizada ✓ - ya puedes entrar con ella");
         s.cerrar();
       });
     });

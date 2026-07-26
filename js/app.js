@@ -1,5 +1,5 @@
 /* ============================================================
-   app.js — router hash, shell (sidebar/dock/FAB), tema e inicio
+   app.js - router hash, shell (sidebar/dock/FAB), tema e inicio
    ============================================================ */
 window.App = window.App || {};
 
@@ -99,7 +99,7 @@ window.App = window.App || {};
   /* etiqueta del indicador ☁️ según el estado real (no siempre "Sincronizado") */
   function etiquetaSync() {
     var e = App.estadoSyncActual ? App.estadoSyncActual() : "ok";
-    return e === "offline" ? "⚠️ Sin conexión — cambios en cola"
+    return e === "offline" ? "⚠️ Sin conexión - cambios en cola"
       : e === "sync" ? "☁️ Sincronizando…"
         : "☁️ Sincronizado";
   }
@@ -119,13 +119,13 @@ window.App = window.App || {};
         return '<a class="row-item" data-mas-ir="' + m.id + '" href="#/' + m.id + '"><div class="thumb">' + App.icon(m.icono) + "</div>" +
           '<div class="row-main"><div class="row-title">' + m.titulo + "</div></div>" + App.icon("chevR") + "</a>";
       }).join("") + "</div>" +
-      (App.MODO_NUBE ? '<button class="btn block" data-mas-escaner style="margin-top:6px">📷 Escáner remoto — usar este celular como pistola de la compu</button>' : "") +
+      (App.MODO_NUBE ? '<button class="btn block" data-mas-escaner style="margin-top:6px">📷 Escáner remoto - usar este celular como pistola de la compu</button>' : "") +
       '<div class="flex" style="gap:8px;margin-top:6px">' +
       '<button class="btn" data-mas-tema style="flex:1">' + App.icon(esOscuro ? "sol" : "luna") + " Tema " + (esOscuro ? "claro" : "oscuro") + "</button>" +
       '<button class="btn danger" data-mas-salir style="flex:1">' + App.icon("salir") + " Salir</button></div>";
 
     var s = App.sheet({ titulo: "Más", cuerpo: cuerpo });
-    /* los enlaces navegan y rutear() cierra el sheet — cerrarlo aquí haría history.back()
+    /* los enlaces navegan y rutear() cierra el sheet - cerrarlo aquí haría history.back()
        en plena navegación y podría comerse el destino */
     var bt = App.$("[data-mas-tasa]", s.el);
     if (bt) bt.addEventListener("click", function () {
@@ -197,7 +197,7 @@ window.App = window.App || {};
     if (window.Notification && Notification.permission === "granted") {
       try { new Notification(titulo, { body: cuerpo }); } catch (e2) { }
     }
-    App.toast(titulo + " — " + cuerpo);
+    App.toast(titulo + " - " + cuerpo);
   }
   function chequearRecordatorios() {
     if (!App.auth.user) return;
@@ -211,14 +211,14 @@ window.App = window.App || {};
       if (mins > 0 && mins <= 60) {
         var cli = App.cliente(v.clienteId);
         notificar("🏪 Retiro a las " + e.horaRetiro,
-          (cli ? cli.nombre : "Un cliente") + " pasa en " + mins + " min — ten listo el pedido", "ret-" + v.id);
+          (cli ? cli.nombre : "Un cliente") + " pasa en " + mins + " min - ten listo el pedido", "ret-" + v.id);
       }
     });
     App.calc.porLlevar().forEach(function (v) {
       if (v.fecha.slice(0, 10) < hoy) {
         var cli2 = App.cliente(v.clienteId);
         notificar("🚚 Pedido por llevar",
-          "El de " + (cli2 ? cli2.nombre : "un cliente") + " sigue sin salir — llévalo a la agencia", "llevar-" + v.id);
+          "El de " + (cli2 ? cli2.nombre : "un cliente") + " sigue sin salir - llévalo a la agencia", "llevar-" + v.id);
       }
     });
   }
@@ -226,7 +226,7 @@ window.App = window.App || {};
     if (!window.Notification) { App.toast("Este navegador no soporta notificaciones", "err"); return; }
     Notification.requestPermission().then(function (p) {
       if (p === "granted") App.toast("Notificaciones del navegador activadas 🔔");
-      else App.toast("Permiso no concedido — seguirás viendo avisos dentro de la app", "err");
+      else App.toast("Permiso no concedido - seguirás viendo avisos dentro de la app", "err");
     });
   };
 
@@ -256,7 +256,7 @@ window.App = window.App || {};
   document.addEventListener("DOMContentLoaded", function () {
     App.load();
     aplicarTema();
-    /* PWA: solo con HTTPS (versión online) — permite instalarla como app */
+    /* PWA: solo con HTTPS (versión online) - permite instalarla como app */
     if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
       navigator.serviceWorker.register("sw.js").catch(function () { });
     }
@@ -310,10 +310,10 @@ window.App = window.App || {};
               App.auth.user = perfil;
               App.auth.user.email = ses.user.email || "";
               App.iniciarApp();
-              App.toast("Sin conexión — estás viendo la última copia guardada en este equipo");
+              App.toast("Sin conexión - estás viendo la última copia guardada en este equipo");
               return;
             }
-            App.toast(e2 && e2.sinPerfil ? e2.message : "No se pudo conectar con el servidor — revisa tu internet y recarga", "err");
+            App.toast(e2 && e2.sinPerfil ? e2.message : "No se pudo conectar con el servidor - revisa tu internet y recarga", "err");
             App.renderLogin();
           });
         }

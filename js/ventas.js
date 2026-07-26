@@ -1,5 +1,5 @@
 /* ============================================================
-   ventas.js — listado, detalle, abonos y registro de venta nueva
+   ventas.js - listado, detalle, abonos y registro de venta nueva
    ============================================================ */
 window.App = window.App || {};
 
@@ -146,7 +146,7 @@ window.App = window.App || {};
     var cli = App.cliente(v.clienteId);
     var lineas = ["🧾 *Resumen de tu pedido*", ""];
     v.items.forEach(function (i) {
-      lineas.push("• " + i.cant + "× " + i.nombre + (i.talla ? " (talla " + i.talla + ")" : "") + " — $" + (i.cant * i.precioUnit).toFixed(2));
+      lineas.push("• " + i.cant + "× " + i.nombre + (i.talla ? " (talla " + i.talla + ")" : "") + " - $" + (i.cant * i.precioUnit).toFixed(2));
     });
     lineas.push("");
     lineas.push("💵 Total: *" + App.fmt.usd(C().ventaTotal(v)) + "*" + (v.totalBs ? " / " + App.fmt.bs(v.totalBs) : ""));
@@ -157,7 +157,7 @@ window.App = window.App || {};
     }
     if (v.entrega && v.entrega.tipo === "motorizado") {
       lineas.push("🏍️ Entrega con motorizado" +
-        ((v.entrega.cobroEnvio || 0) > 0 ? " — delivery: $" + (+v.entrega.cobroEnvio).toFixed(2) + " (se paga por adelantado)" : ""));
+        ((v.entrega.cobroEnvio || 0) > 0 ? " - delivery: $" + (+v.entrega.cobroEnvio).toFixed(2) + " (se paga por adelantado)" : ""));
     }
     lineas.push("");
     lineas.push("¡Gracias por tu compra" + (cli ? ", " + cli.nombre.split(" ")[0] : "") + "! 💕");
@@ -173,7 +173,7 @@ window.App = window.App || {};
     var cuerpo = '<div class="flex wrap" style="gap:6px">' +
       '<span class="pill">' + App.fmt.fecha(v.fecha.slice(0, 10)) + " " + App.fmt.hora(v.fecha) + "</span>" +
       '<span class="pill info">' + App.esc(v.canal) + "</span>" +
-      '<span class="pill">' + App.esc((App.usuario(v.vendedorId) || {}).nombre || "—") + "</span>" +
+      '<span class="pill">' + App.esc((App.usuario(v.vendedorId) || {}).nombre || "-") + "</span>" +
       (v.promoId ? '<span class="pill tint">🏷️ ' + App.esc((App.promo(v.promoId) || {}).nombre || "Promo") + "</span>" : "") +
       "</div>";
 
@@ -273,7 +273,7 @@ window.App = window.App || {};
           '<div class="row-main"><div class="row-title num">' + App.esc(e.guia.numero) + '</div><div class="row-sub">Guía · ' + App.fmt.fecha(e.guia.fecha) + "</div></div>" +
           '<button class="btn icon" data-copiar-guia>' + App.icon("copiar") + "</button></div>";
       } else {
-        cuerpo += '<div class="small muted">Sin guía todavía — se carga al despachar en Envíos.</div>';
+        cuerpo += '<div class="small muted">Sin guía todavía - se carga al despachar en Envíos.</div>';
       }
     } else cuerpo += "</div>";
 
@@ -318,7 +318,7 @@ window.App = window.App || {};
       });
     });
     if (q("[data-pagado]")) q("[data-pagado]").addEventListener("click", function () {
-      /* el saldo restante entra como abono de hoy — así el cierre de caja lo capta */
+      /* el saldo restante entra como abono de hoy - así el cierre de caja lo capta */
       var saldoM = C().ventaSaldo(v);
       if (saldoM > 0) {
         v.abonos = v.abonos || [];
@@ -335,10 +335,10 @@ window.App = window.App || {};
       App.sheet({ titulo: "🧾 Guía", cuerpo: '<img src="' + App.esc(e.guia.foto) + '" style="width:100%;border-radius:14px">' });
     });
     q("[data-wa-res]").addEventListener("click", function () {
-      App.copiar(App.ventaResumenWA(v), "Resumen copiado — pégalo en WhatsApp");
+      App.copiar(App.ventaResumenWA(v), "Resumen copiado - pégalo en WhatsApp");
     });
     if (q("[data-avanzar]")) q("[data-avanzar]").addEventListener("click", function () {
-      if (e.estado === "preparando") { e.estado = "por_llevar"; App.save(); App.toast("Pedido armado — listo para salir 🚚"); s.cerrar(); App.render(); }
+      if (e.estado === "preparando") { e.estado = "por_llevar"; App.save(); App.toast("Pedido armado - listo para salir 🚚"); s.cerrar(); App.render(); }
       else if (e.estado === "por_llevar" && e.tipo === "agencia") { s.cerrar(); location.hash = "#/envios"; }
       else { e.estado = "entregado"; App.save(); App.toast("Entrega completada 🎉"); s.cerrar(); App.render(); }
     });
@@ -438,7 +438,7 @@ window.App = window.App || {};
       });
       App.calc.reponerItems(devItems, v.id, "devolucion");
       App.audit("devolucion", App.fmt.usd(monto) + " · " + devItems.map(function (i) { return i.cant + "× " + i.nombre; }).join(", "));
-      App.save(); App.toast("Devolución registrada — stock repuesto ↩️");
+      App.save(); App.toast("Devolución registrada - stock repuesto ↩️");
       s.cerrar(); if (done) done();
     });
   }
@@ -448,7 +448,7 @@ window.App = window.App || {};
     var s = App.sheet({
       titulo: abonoEx ? "💵 Editar abono" : "💵 Registrar abono",
       cuerpo: '<div class="form-grid">' +
-        '<div class="field"><label>Monto (USD) — saldo: ' + App.fmt.usd(saldo) + '</label>' +
+        '<div class="field"><label>Monto (USD) - saldo: ' + App.fmt.usd(saldo) + '</label>' +
         '<input class="input num" id="in-abono" type="number" min="0.01" step="0.01" value="' + (abonoEx ? abonoEx.montoUsd : Math.max(0.01, saldo).toFixed(2)) + '"></div>' +
         '<div class="field"><label>Fecha</label><input class="input" id="in-abono-fecha" type="date" value="' + (abonoEx ? abonoEx.fecha : App.hoyISO()) + '"></div>' +
         '<div class="field full"><label>Método con el que pagó esta parte</label><select class="select" id="in-abono-metodo">' +
@@ -573,7 +573,7 @@ window.App = window.App || {};
           res.innerHTML = hits.map(function (c) {
             return '<div class="row-item" data-cli="' + c.id + '"><div class="avatar">' + App.iniciales(c.nombre) + "</div>" +
               '<div class="row-main"><div class="row-title">' + App.esc(c.nombre) + '</div><div class="row-sub">' + App.esc(c.ciudad || "") + "</div></div></div>";
-          }).join("") || '<div class="empty"><p>Sin resultados — créalo con “+ Nuevo”.</p></div>';
+          }).join("") || '<div class="empty"><p>Sin resultados - créalo con “+ Nuevo”.</p></div>';
           App.$$("[data-cli]", res).forEach(function (r) {
             r.addEventListener("click", function () { NV.clienteId = r.dataset.cli; pintarCliente(); });
           });
@@ -813,7 +813,7 @@ window.App = window.App || {};
             App.toast("Tasa BCV de hoy cargada ✓");
             pintarPago(); pintarTotal();
           } else {
-            App.toast("Sin conexión con la API — edítala manual", "err");
+            App.toast("Sin conexión con la API - edítala manual", "err");
           }
         });
       });
@@ -833,7 +833,7 @@ window.App = window.App || {};
         html += '<div class="form-grid" style="margin-top:10px">' +
           '<div class="field"><label>¿Qué día pasa a buscarlo? (vacío = ya se lo llevó)</label>' +
           '<input class="input" type="date" data-e="fechaRetiro" value="' + (e.fechaRetiro || "") + '"></div>' +
-          '<div class="field"><label>Hora (opcional — te lo recuerda el sistema)</label>' +
+          '<div class="field"><label>Hora (opcional - te lo recuerda el sistema)</label>' +
           '<input class="input" type="time" data-e="horaRetiro" value="' + (e.horaRetiro || "") + '"></div></div>';
       } else if (e.tipo === "motorizado") {
         html += '<div class="form-grid" style="margin-top:10px">' +

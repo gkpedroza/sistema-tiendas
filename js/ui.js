@@ -1,5 +1,5 @@
 /* ============================================================
-   ui.js — helpers DOM, formato es-VE, iconos, sheets, toasts,
+   ui.js - helpers DOM, formato es-VE, iconos, sheets, toasts,
    y gráficas SVG propias (línea glow, barras, dona, sparkline)
    ============================================================ */
 window.App = window.App || {};
@@ -36,7 +36,7 @@ window.App = window.App || {};
     num: function (n) { return nfNum.format(+n || 0); },
     pct: function (n, dec) { return nfNum.format(+n || 0) + "%"; },
     fecha: function (iso) {
-      if (!iso) return "—";
+      if (!iso) return "-";
       var d = App.fromISO(iso);
       return d.getDate() + " " + MESES[d.getMonth()] + (d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : "");
     },
@@ -398,10 +398,10 @@ window.App = window.App || {};
   };
 
   /* ---------- escáner de códigos de barras ----------
-     1) Pistola USB/Bluetooth: escribe como teclado — funciona YA en cualquier
+     1) Pistola USB/Bluetooth: escribe como teclado - funciona YA en cualquier
         buscador con Enter (ver App.buscarPorCodigo).
      2) Cámara: BarcodeDetector nativo del navegador (gratis). Requiere HTTPS
-        o localhost — plenamente operativo en la versión online. */
+        o localhost - plenamente operativo en la versión online. */
   App.buscarPorCodigo = function (txt) {
     var t = String(txt || "").trim();
     if (!t) return null;
@@ -412,7 +412,7 @@ window.App = window.App || {};
     })[0] || null;
   };
   /* motor de escaneo de respaldo (ZXing) para navegadores sin BarcodeDetector
-     (todo iPhone) — se descarga solo la primera vez que se abre la cámara */
+     (todo iPhone) - se descarga solo la primera vez que se abre la cámara */
   function cargarZXing() {
     return new Promise(function (resolve, reject) {
       if (window.ZXing && window.ZXing.BrowserMultiFormatReader) { resolve(); return; }
@@ -478,7 +478,7 @@ window.App = window.App || {};
     var s = App.sheet({
       titulo: "📷 Escanear código",
       cuerpo: '<video id="esc-video" playsinline muted autoplay style="width:100%;max-height:320px;border-radius:14px;background:#000"></video>' +
-        '<div class="chart-note" id="esc-nota">Apunta al código de barras o QR — se lee solo.</div>' +
+        '<div class="chart-note" id="esc-nota">Apunta al código de barras o QR - se lee solo.</div>' +
         (App.MODO_NUBE ? '<div class="small muted" style="margin-top:8px">📱 O usa tu celular como pistola: abre la app en el teléfono → Más → <b>Escáner remoto</b>. Lo que escanees allá cae aquí.</div>' : ""),
       alCerrar: function () {
         pararLectura(refs);
@@ -503,18 +503,18 @@ window.App = window.App || {};
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       video.style.display = "none";
       if (nota) nota.textContent = App.MODO_NUBE
-        ? "Esta computadora no tiene cámara — escanea con el celular (Más → Escáner remoto) o usa una pistola USB."
-        : "Sin cámara en este entorno — usa una pistola lectora o escribe el código.";
+        ? "Esta computadora no tiene cámara - escanea con el celular (Más → Escáner remoto) o usa una pistola USB."
+        : "Sin cámara en este entorno - usa una pistola lectora o escribe el código.";
       return;
     }
     if (!("BarcodeDetector" in window) && nota) nota.textContent = "Cargando el lector…";
     iniciarLectura(video, encontrado, function () {
       video.style.display = "none";
       if (nota) nota.textContent = App.MODO_NUBE
-        ? "La cámara no abrió aquí — escanea con el celular (Más → Escáner remoto) o revisa el permiso de cámara."
-        : "La cámara no está disponible — usa una pistola lectora o escribe el código.";
+        ? "La cámara no abrió aquí - escanea con el celular (Más → Escáner remoto) o revisa el permiso de cámara."
+        : "La cámara no está disponible - usa una pistola lectora o escribe el código.";
     }, refs, function () {
-      if (nota) nota.textContent = "Apunta al código de barras o QR — se lee solo.";
+      if (nota) nota.textContent = "Apunta al código de barras o QR - se lee solo.";
     });
   };
 
@@ -563,7 +563,7 @@ window.App = window.App || {};
     if (!("BarcodeDetector" in window) && nota) nota.textContent = "Cargando el lector…";
     iniciarLectura(video, leido, function () {
       s.cerrar();
-      App.toast("La cámara no está disponible — revisa el permiso de cámara del navegador.", "err");
+      App.toast("La cámara no está disponible - revisa el permiso de cámara del navegador.", "err");
     }, refs, function () {
       if (nota) nota.textContent = "Cada código que leas aparece al instante en la computadora. Puedes escanear varios seguidos.";
     });
@@ -845,7 +845,7 @@ window.App = window.App || {};
     var svg = '<svg viewBox="0 0 ' + S + " " + S + '" style="max-width:230px;margin:0 auto">';
     var ang = -90;
     if (data.length === 1) {
-      // un solo segmento: un arco de 360° no se dibuja — usar círculo completo
+      // un solo segmento: un arco de 360° no se dibuja - usar círculo completo
       svg += '<circle class="seg" data-i="0" cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + data[0].color + '" stroke-width="' + grosor + '"/>';
     } else data.forEach(function (d, i) {
       var span = (d.valor / total) * 360 - gapDeg;
@@ -916,7 +916,7 @@ window.App = window.App || {};
     return '<span class="pill brand-' + t.id + '">' + t.emoji + " " + App.esc(t.corto) + "</span>";
   };
   App.deltaPill = function (pct) {
-    if (pct == null) return '<span class="stat-delta flat">—</span>';
+    if (pct == null) return '<span class="stat-delta flat">-</span>';
     var cls = pct > 0.5 ? "up" : (pct < -0.5 ? "down" : "flat");
     var flecha = pct > 0.5 ? "▲" : (pct < -0.5 ? "▼" : "•");
     return '<span class="stat-delta ' + cls + '">' + flecha + " " + App.fmt.num(Math.abs(pct)) + "%</span>";
@@ -946,7 +946,7 @@ window.App = window.App || {};
     ddPanel.style.width = w + "px";
     ddPanel.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + "px";
     var h = ddPanel.offsetHeight;
-    /* iOS: con teclado abierto innerHeight no cambia — usar visualViewport y dejar margen del home indicator */
+    /* iOS: con teclado abierto innerHeight no cambia - usar visualViewport y dejar margen del home indicator */
     var vpH = window.visualViewport ? window.visualViewport.height + window.visualViewport.offsetTop : window.innerHeight;
     var abajo = r.bottom + 6 + h <= vpH - 42;
     ddPanel.style.top = (abajo ? r.bottom + 6 : Math.max(8, r.top - 6 - h)) + "px";

@@ -1,5 +1,5 @@
 /* ============================================================
-   inventario.js — productos multi-marca con variantes, fotos,
+   inventario.js - productos multi-marca con variantes, fotos,
    costos China→Vzla (solo súper) y plantilla WhatsApp
    ============================================================ */
 window.App = window.App || {};
@@ -116,7 +116,7 @@ window.App = window.App || {};
         var top = arr.slice().sort(function (a, b) { return b.usd - a.usd; })[0];
         var sin30 = arr.filter(function (s) { return s.diasSinVenta == null || s.diasSinVenta > 30; }).length;
         var criticos = arr.filter(function (s) { return s.coberturaDias != null && s.coberturaDias <= 7; }).length;
-        var topTxt = top && top.usd > 0 ? App.esc(top.producto.emoji + " " + top.producto.nombre) : "—";
+        var topTxt = top && top.usd > 0 ? App.esc(top.producto.emoji + " " + top.producto.nombre) : "-";
         var topSub = top && top.usd > 0 ? App.fmt.usd0(top.usd) + " históricos" : "sin ventas aún";
 
         var h = '<div class="grid-kpi" style="grid-template-columns:repeat(3,minmax(0,1fr))">' +
@@ -137,7 +137,7 @@ window.App = window.App || {};
             '<div class="thumb ' + App.esc(p.tienda) + '">' + (p.fotos && p.fotos[0] ? '<img src="' + App.esc(p.fotos[0]) + '">' : p.emoji) + "</div>" +
             '<div class="row-main"><div class="row-title wrap" style="font-size:13px">' + App.esc(p.nombre) + " " + App.pillTienda(p.tienda) +
             ' <span class="pill ' + App.etiquetaProd.pill[st.etiqueta] + '">' + App.etiquetaProd.label[st.etiqueta] + "</span></div>" +
-            '<div class="row-sub">' + st.unidades + " uds en " + st.ordenes + " órdenes · 1ª: " + (st.primera ? App.fmt.fecha(st.primera) : "—") +
+            '<div class="row-sub">' + st.unidades + " uds en " + st.ordenes + " órdenes · 1ª: " + (st.primera ? App.fmt.fecha(st.primera) : "-") +
             " · últ.: " + (st.ultima ? App.fmt.fechaRel(st.ultima) : "nunca") + "</div>" +
             '<div class="row-sub">stock ' + st.stock + (st.coberturaDias != null ? " · dura ≈" + st.coberturaDias + " días" : "") +
             (function () { var ec = C.enCaminoDeProducto(p.id); return ec ? " · 🚢 +" + ec.cant + (ec.llegadaEst ? " ~" + App.fmt.fecha(ec.llegadaEst) : "") : ""; })() +
@@ -174,7 +174,7 @@ window.App = window.App || {};
           [["", "Todos"], ["venta", "🛒 Ventas"], ["compra", "📦 Compras"], ["ajuste", "✏️ Ajustes"], ["devolucion", "↩️ Devoluciones"]].map(function (m) {
             return '<button class="chip' + ((kardexMotivo || "") === m[0] ? " active" : "") + '" data-kmot="' + m[0] + '">' + m[1] + "</button>";
           }).join("") + "</div>";
-        h += '<div class="card"><div class="card-head"><h2>📜 Kardex — movimientos de stock</h2><span class="pill">' + movs.length + "</span></div>";
+        h += '<div class="card"><div class="card-head"><h2>📜 Kardex - Movimientos de stock</h2><span class="pill">' + movs.length + "</span></div>";
         if (!movs.length) {
           h += '<div class="empty" style="padding:16px"><p>Aún no hay movimientos' + (kardexMotivo || filtro.texto ? " con esos filtros" : "") +
             ". Se registran solos desde ahora: cada venta, ajuste de stock, pedido recibido o devolución deja su huella aquí.</p></div>";
@@ -368,7 +368,7 @@ window.App = window.App || {};
     /* (el ajuste de stock vive solo en ✏️ Editar: un toque accidental aquí descontaba unidades) */
 
     App.$("[data-wa]", s.el).addEventListener("click", function () {
-      App.copiar(App.textoProducto(p), "Ficha copiada — pégala en WhatsApp o Instagram");
+      App.copiar(App.textoProducto(p), "Ficha copiada - pégala en WhatsApp o Instagram");
     });
     var be = App.$("[data-editar]", s.el);
     if (be) be.addEventListener("click", function () { s.cerrar(); formProducto(p); });

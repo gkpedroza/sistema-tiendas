@@ -1,5 +1,5 @@
 /* ============================================================
-   proveedores.js — proveedores China (Alibaba/1688) y agentes
+   proveedores.js - proveedores China (Alibaba/1688) y agentes
    de carga, con contactos y direcciones de fábrica
    ============================================================ */
 window.App = window.App || {};
@@ -46,7 +46,7 @@ window.App = window.App || {};
           '<div class="spread small muted"><span>' + tot.uds + " uds · mercancía " + App.fmt.usd(tot.mercancia) + " + flete " + App.fmt.usd(+co.fleteTotal || 0) + '</span><b class="num">' + App.fmt.usd(tot.total) + "</b></div>" +
           '<div class="flex wrap" style="gap:8px;margin-top:9px">' +
           (co.estado === "pedida" ? '<button class="btn sm" data-co-transito="' + co.id + '">🚢 Ya salió</button>' : "") +
-          '<button class="btn sm primary" data-co-recibir="' + co.id + '">✓ Recibida — sumar stock</button>' +
+          '<button class="btn sm primary" data-co-recibir="' + co.id + '">✓ Recibida - sumar stock</button>' +
           '<button class="btn sm ghost" data-co-editar="' + co.id + '">' + App.icon("editar") + "</button>" +
           '<button class="btn sm ghost" data-co-borrar="' + co.id + '" style="color:var(--danger)">' + App.icon("basura") + "</button>" +
           "</div></div>";
@@ -64,7 +64,7 @@ window.App = window.App || {};
       provs.forEach(function (pr) {
         html += '<div class="card lift" data-prov="' + pr.id + '" style="cursor:pointer">' +
           '<div class="spread"><div class="row-title" style="font-size:15px">🏭 ' + App.esc(pr.nombre) + "</div>" +
-          '<span class="pill info">' + App.esc(pr.plataforma || "—") + "</span></div>" +
+          '<span class="pill info">' + App.esc(pr.plataforma || "-") + "</span></div>" +
           (pr.contacto ? '<div class="row-sub">Contacto: ' + App.esc(pr.contacto) + (pr.wechat ? " · WeChat: " + App.esc(pr.wechat) : "") + "</div>" : "") +
           (pr.direccion ? '<div class="row-sub">📍 ' + App.esc(pr.direccion) + "</div>" : "") +
           (pr.productos ? '<div class="small" style="margin-top:6px">' + App.esc(pr.productos) + "</div>" : "") +

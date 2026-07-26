@@ -1,5 +1,5 @@
 /* ============================================================
-   calendario.js — festividades comerciales de Venezuela con
+   calendario.js - festividades comerciales de Venezuela con
    recordatorios + análisis de mejores días para vender
    ============================================================ */
 window.App = window.App || {};
@@ -35,7 +35,7 @@ window.App = window.App || {};
       });
       html += "</div>" +
         '<div class="chart-note">Las que están dentro de su período de aviso aparecen como recordatorio en Inicio. ' +
-        "Ojo: Carnaval, Semana Santa y Día del Niño cambian de fecha cada año — ajústalas en enero.</div></div>";
+        "Ojo: Carnaval, Semana Santa y Día del Niño cambian de fecha cada año - ajústalas en enero.</div></div>";
 
       /* mejores días */
       var ventanas = C.ventasEntre(App.toISO(App.addDays(new Date(), -90)), App.hoyISO());
@@ -44,7 +44,7 @@ window.App = window.App || {};
       html += '<div class="card section-gap"><div class="card-head"><h2>🏆 Tus mejores días para vender</h2><span class="pill">últimos 90 días</span></div>' +
         '<div class="chart-box" id="cal-dias"></div>' +
         '<div class="chart-note">Promedio vendido por día de la semana. ' +
-        (mejor && mejor.promedio > 0 ? "Tu día fuerte es <b>" + mejor.dia + "</b> — ese día publica y lanza promos." : "Aún hay pocos datos.") + "</div></div>";
+        (mejor && mejor.promedio > 0 ? "Tu día fuerte es <b>" + mejor.dia + "</b> - ese día publica y lanza promos." : "Aún hay pocos datos.") + "</div></div>";
 
       /* día del mes */
       var porDiaMes = {};

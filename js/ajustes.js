@@ -1,5 +1,5 @@
 /* ============================================================
-   ajustes.js — perfil, seguridad, usuarios/permisos, tiendas,
+   ajustes.js - perfil, seguridad, usuarios/permisos, tiendas,
    plantilla WhatsApp, listas, apariencia y respaldo de datos
    ============================================================ */
 window.App = window.App || {};
@@ -36,7 +36,7 @@ window.App = window.App || {};
       /* el QR llega como data-URI con comillas dentro: se asigna por DOM, nunca interpolado en el HTML */
       App.$("#fa-qr", s.el).src = f.totp.qr_code;
       App.$("#fa-copiar", s.el).addEventListener("click", function () {
-        App.copiar(f.totp.secret, "Clave copiada — pégala en tu autenticador");
+        App.copiar(f.totp.secret, "Clave copiada - pégala en tu autenticador");
       });
       function verificarAlta() {
         var code = App.$("#fa-cod", s.el).value.trim();
@@ -44,7 +44,7 @@ window.App = window.App || {};
         App.sb.auth.mfa.challenge({ factorId: f.id }).then(function (rc) {
           if (rc.error) { App.toast(rc.error.message, "err"); return; }
           App.sb.auth.mfa.verify({ factorId: f.id, challengeId: rc.data.id, code: code }).then(function (rv) {
-            if (rv.error) { App.toast("Código incorrecto — prueba con el siguiente que aparezca", "err"); return; }
+            if (rv.error) { App.toast("Código incorrecto - prueba con el siguiente que aparezca", "err"); return; }
             verificado = true;
             App.toast("2FA activada 🔐");
             s.cerrar();
@@ -166,7 +166,7 @@ window.App = window.App || {};
           ? '<p class="small muted">☁️ Tus datos viven en el servidor y se sincronizan solos entre dispositivos. El respaldo JSON es una copia adicional de seguridad.</p>'
           : '<p class="small muted">Los datos viven en este navegador. Descarga un respaldo antes de limpiar caché o cambiar de equipo.</p>') +
         '<div class="small" style="margin-top:6px">Último respaldo: <b>' +
-        ((App.db.settings.ultimoRespaldo || App.db.meta.ultimoRespaldo) ? App.fmt.fechaRel(App.db.settings.ultimoRespaldo || App.db.meta.ultimoRespaldo) : "nunca — descárgalo hoy") + "</b></div>" +
+        ((App.db.settings.ultimoRespaldo || App.db.meta.ultimoRespaldo) ? App.fmt.fechaRel(App.db.settings.ultimoRespaldo || App.db.meta.ultimoRespaldo) : "nunca - descárgalo hoy") + "</b></div>" +
         '<div class="flex wrap" style="gap:8px;margin-top:10px">' +
         '<button class="btn" id="aj-exportar">' + App.icon("descargar") + " Descargar respaldo</button>" +
         (App.MODO_NUBE
@@ -184,8 +184,8 @@ window.App = window.App || {};
         "</div>";
 
       html += App.MODO_NUBE
-        ? '<div class="small muted" style="margin:16px 4px">Sistema La Teacher · En Vzla — versión online. Datos y cuentas protegidos en el servidor; funciona en todos tus dispositivos.</div></div>'
-        : '<div class="small muted" style="margin:16px 4px">Sistema La Teacher · En Vzla — prototipo v0.1 (local). ' +
+        ? '<div class="small muted" style="margin:16px 4px">Sistema La Teacher · En Vzla - versión online. Datos y cuentas protegidos en el servidor; funciona en todos tus dispositivos.</div></div>'
+        : '<div class="small muted" style="margin:16px 4px">Sistema La Teacher · En Vzla - prototipo v0.1 (local). ' +
         "Fase 2: versión online con seguridad real, tasa BCV automática, lectura de guías con IA y notificaciones.</div></div>";
 
       el.innerHTML = html;
@@ -228,7 +228,7 @@ window.App = window.App || {};
           if (!txt || !btn) return;
           btn.disabled = false;
           if (tot) {
-            txt.textContent = "Activada ✓ — se pide el código al iniciar sesión";
+            txt.textContent = "Activada ✓ - se pide el código al iniciar sesión";
             btn.textContent = "Desactivar";
             btn.onclick = function () {
               App.confirmar("¿Desactivar la verificación en dos pasos?", { peligro: true, accion: "Desactivar" }).then(function (si) {
@@ -240,7 +240,7 @@ window.App = window.App || {};
               });
             };
           } else {
-            txt.textContent = "Desactivada — actívala con Google Authenticator o similar";
+            txt.textContent = "Desactivada - actívala con Google Authenticator o similar";
             btn.textContent = "Activar";
             btn.onclick = activar2FA;
           }
@@ -253,7 +253,7 @@ window.App = window.App || {};
             App.render();
           } else {
             App.activarBiometria().then(function () {
-              App.toast("Face ID/huella activado 🔒 — se pedirá al abrir la app");
+              App.toast("Face ID/huella activado 🔒 - se pedirá al abrir la app");
               App.render();
             }, function () {
               App.toast("No se pudo activar: el dispositivo debe tener Face ID o huella configurado", "err");
@@ -268,7 +268,7 @@ window.App = window.App || {};
       if (lockP) lockP.addEventListener("change", function () {
         s.bloquearPrecioVendedor = lockP.checked;
         App.save();
-        App.toast(lockP.checked ? "Candado de precios activado 🔒" : "Candado desactivado — cualquiera puede cambiar precios");
+        App.toast(lockP.checked ? "Candado de precios activado 🔒" : "Candado desactivado - cualquiera puede cambiar precios");
       });
 
       App.$$("[data-tema]", el).forEach(function (b) {

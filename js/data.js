@@ -1,5 +1,5 @@
 /* ============================================================
-   data.js — modelo, localStorage, seed demo y cálculos (App.calc)
+   data.js - modelo, localStorage, seed demo y cálculos (App.calc)
    ============================================================ */
 window.App = window.App || {};
 
@@ -87,7 +87,7 @@ window.App = window.App || {};
     var hoy = new Date();
     var DIAS_HIST = 95;
 
-    /* tasas: serie diaria ascendente con ruido (DEMO — editar en Ajustes) */
+    /* tasas: serie diaria ascendente con ruido (DEMO - editar en Ajustes) */
     var tasasMapa = {}; // iso -> {usd, eur}
     (function () {
       var usd = 636, eur = 742;
@@ -126,7 +126,7 @@ window.App = window.App || {};
       p.costoAds = Math.round(p.precio * 0.08 * 100) / 100; // estimado demo para el pricing
       p.presupuestoAds = 0;
     });
-    productos[7].presupuestoAds = 50;  // Pistola de Agua — campaña Día del Niño
+    productos[7].presupuestoAds = 50;  // Pistola de Agua - campaña Día del Niño
     productos[14].presupuestoAds = 40; // Smartwatch
 
     var clientes = [
@@ -270,7 +270,7 @@ window.App = window.App || {};
       { id: "g2", fecha: toISO(addDays(hoy, -75)), tipo: "ads", categoria: "Ads Instagram", descripcion: "Ads Instagram mayo", tienda: "evz", montoUsd: 60, productoId: null, desde: null, hasta: null },
       { id: "g3", fecha: toISO(addDays(hoy, -40)), tipo: "ads", categoria: "Ads Instagram", descripcion: "Ads Instagram junio", tienda: "ljt", montoUsd: 90, productoId: null, desde: null, hasta: null },
       { id: "g4", fecha: toISO(addDays(hoy, -40)), tipo: "ads", categoria: "Ads Instagram", descripcion: "Ads Instagram junio", tienda: "evz", montoUsd: 75, productoId: null, desde: null, hasta: null },
-      { id: "g5", fecha: toISO(addDays(hoy, -10)), tipo: "ads", categoria: "Ads Instagram", descripcion: "Campaña Día del Niño — pistola de agua", tienda: "ljt", montoUsd: 25, productoId: "p8", desde: toISO(addDays(hoy, -10)), hasta: toISO(addDays(hoy, -3)) },
+      { id: "g5", fecha: toISO(addDays(hoy, -10)), tipo: "ads", categoria: "Ads Instagram", descripcion: "Campaña Día del Niño - pistola de agua", tienda: "ljt", montoUsd: 25, productoId: "p8", desde: toISO(addDays(hoy, -10)), hasta: toISO(addDays(hoy, -3)) },
       { id: "g6", fecha: toISO(addDays(hoy, -8)), tipo: "ads", categoria: "Ads Instagram", descripcion: "Ads smartwatch", tienda: "evz", montoUsd: 18, productoId: "p15", desde: toISO(addDays(hoy, -8)), hasta: toISO(addDays(hoy, -1)) },
       { id: "g7", fecha: toISO(addDays(hoy, -22)), tipo: "operativo", categoria: "Empaques", descripcion: "Bolsas y material de empaque", tienda: null, montoUsd: 25, productoId: null },
       { id: "g8", fecha: toISO(addDays(hoy, -5)), tipo: "operativo", categoria: "Papelería y etiquetas", descripcion: "Papelería y etiquetas", tienda: null, montoUsd: 10, productoId: null }
@@ -279,7 +279,7 @@ window.App = window.App || {};
     /* creativos / contenidos publicados con sus resultados */
     var creativos = [
       { id: "cr1", fecha: toISO(addDays(hoy, -9)), tipo: "Reel", tienda: "ljt", productoId: "p8", inversion: 25, mensajes: 34, ventas: 6, comentario: "Gancho en el primer segundo y precio en Bs al final. Funcionó el CTA de “escríbeme AGUA”." },
-      { id: "cr2", fecha: toISO(addDays(hoy, -6)), tipo: "Historia", tienda: "evz", productoId: "p15", inversion: 0, mensajes: 8, ventas: 1, comentario: "Historia con encuesta. Poco alcance orgánico — probar con reel." },
+      { id: "cr2", fecha: toISO(addDays(hoy, -6)), tipo: "Historia", tienda: "evz", productoId: "p15", inversion: 0, mensajes: 8, ventas: 1, comentario: "Historia con encuesta. Poco alcance orgánico - probar con reel." },
       { id: "cr3", fecha: toISO(addDays(hoy, -3)), tipo: "Carrusel", tienda: "ljt", productoId: "p4", inversion: 10, mensajes: 15, ventas: 3, comentario: "Carrusel paso a paso del slime. Muchos guardados." }
     ];
 
@@ -316,13 +316,13 @@ window.App = window.App || {};
       {
         id: "co1", proveedorId: "pr1", fecha: toISO(addDays(hoy, -40)), estado: "recibida",
         llegadaEst: toISO(addDays(hoy, -20)), recibidaEl: toISO(addDays(hoy, -18)), fleteTotal: 130,
-        notas: "Reposición de juguetes (histórico demo — el stock actual ya lo incluye)",
+        notas: "Reposición de juguetes (histórico demo - el stock actual ya lo incluye)",
         items: [{ productoId: "p4", cant: 20, costoUnit: 4.2, talla: null }, { productoId: "p8", cant: 24, costoUnit: 3.1, talla: null }]
       },
       {
         id: "co2", proveedorId: "pr2", fecha: toISO(addDays(hoy, -12)), estado: "transito",
         llegadaEst: toISO(addDays(hoy, 6)), recibidaEl: null, fleteTotal: 95,
-        notas: "Electrónica — consolidado aéreo",
+        notas: "Electrónica - consolidado aéreo",
         items: [{ productoId: "p15", cant: 15, costoUnit: 12.1, talla: null }, { productoId: "p13", cant: 20, costoUnit: 7.2, talla: null }]
       }
     ];
@@ -388,7 +388,7 @@ window.App = window.App || {};
   function migrar() {
     var db = App.db;
     if ((db.meta.version || 1) < 2) {
-      // v2: estados de envío por pasos — "pendiente" pasa a "preparando"
+      // v2: estados de envío por pasos - "pendiente" pasa a "preparando"
       (db.ventas || []).forEach(function (v) {
         if (v.entrega && v.entrega.estado === "pendiente") v.entrega.estado = "preparando";
       });
@@ -479,13 +479,13 @@ window.App = window.App || {};
     db.meta.ultimoRespaldo = null;
     var t = db.settings.tasas;
     t.historial = (t.historial || []).slice(-1);
-    App.audit("estreno", "Datos de ejemplo eliminados — empieza el registro real");
+    App.audit("estreno", "Datos de ejemplo eliminados - empieza el registro real");
     App.save();
     location.reload();
   };
   App.exportar = function () { return JSON.stringify(App.db, null, 1); };
   App.importar = function (json) {
-    if (App.MODO_NUBE) throw new Error("En la versión online no se importan respaldos locales — los datos viven en el servidor");
+    if (App.MODO_NUBE) throw new Error("En la versión online no se importan respaldos locales - los datos viven en el servidor");
     var data = JSON.parse(json);
     if (!data || !data.meta || !data.settings || !data.ventas) throw new Error("Formato inválido");
     App.db = data; App.save();
@@ -1109,7 +1109,7 @@ window.App = window.App || {};
   };
 
   /* ============================================================
-     MODO NUBE (Supabase) — Fase 2
+     MODO NUBE (Supabase) - Fase 2
      La app trabaja igual que siempre sobre App.db en memoria;
      esta capa carga todo del servidor al iniciar, empuja las
      diferencias en cada App.save() (con cola offline) y escucha
@@ -1239,7 +1239,7 @@ window.App = window.App || {};
   var estadoSync = "ok";
   function setEstadoSync(e) {
     estadoSync = e;
-    var lbl = e === "ok" ? "☁️ Sincronizado" : e === "sync" ? "☁️ Guardando…" : "⚠️ Sin conexión — se guardará al volver";
+    var lbl = e === "ok" ? "☁️ Sincronizado" : e === "sync" ? "☁️ Guardando…" : "⚠️ Sin conexión - se guardará al volver";
     if (App.$$) App.$$("[data-sync-estado]").forEach(function (x) {
       x.textContent = lbl;
       x.style.color = e === "offline" ? "var(--danger)" : "";
@@ -1467,7 +1467,7 @@ window.App = window.App || {};
         App.db.usuarios.push(perfil);
       }
       if (!perfil) {
-        var err = new Error("Tu cuenta no tiene perfil asignado — avísale a Manuel");
+        var err = new Error("Tu cuenta no tiene perfil asignado - avísale a Manuel");
         err.sinPerfil = true;
         throw err;
       }

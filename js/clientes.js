@@ -1,5 +1,5 @@
 /* ============================================================
-   clientes.js — CRM: WhatsApp directo, historial, cliente
+   clientes.js - CRM: WhatsApp directo, historial, cliente
    estrella y segmentador para campañas (emails/teléfonos)
    ============================================================ */
 window.App = window.App || {};
@@ -185,7 +185,7 @@ window.App = window.App || {};
             '<div class="avatar">' + App.iniciales(c.nombre) + "</div>" +
             '<div class="row-main"><div class="row-title">' + App.esc(c.nombre) +
             (estrella && estrella.cliente.id === c.id ? ' <span class="star">⭐</span>' : "") + "</div>" +
-            '<div class="row-sub">' + App.esc((c.ciudad || "—") + (c.estado ? ", " + c.estado : "")) +
+            '<div class="row-sub">' + App.esc((c.ciudad || "-") + (c.estado ? ", " + c.estado : "")) +
             (st ? " · " + st.compras + " compra" + (st.compras > 1 ? "s" : "") : " · sin compras aún") + "</div></div>" +
             '<div class="row-end">' + (st ? '<span class="row-amount num">' + App.fmt.usd0(st.total) + "</span>" : "") +
             (st && st.ultima ? '<div class="small muted">' + App.fmt.fechaRel(st.ultima) + "</div>" : "") + "</div>" +
@@ -254,7 +254,7 @@ window.App = window.App || {};
           return '<div class="row-item" data-ce-cli="' + r.cliente.id + '">' +
             '<div class="avatar">' + App.iniciales(r.cliente.nombre) + "</div>" +
             '<div class="row-main"><div class="row-title" style="font-size:13px">' + App.esc(r.cliente.nombre) + "</div>" +
-            '<div class="row-sub">' + App.esc(r.cliente.ciudad || "—") + " · " + r.compras + " compra" + (r.compras > 1 ? "s" : "") +
+            '<div class="row-sub">' + App.esc(r.cliente.ciudad || "-") + " · " + r.compras + " compra" + (r.compras > 1 ? "s" : "") +
             " · últ. " + App.fmt.fechaRel(r.ultima) + "</div></div>" +
             '<span class="row-amount num" style="margin-right:4px">' + App.fmt.usd0(r.total) + "</span>" +
             '<a class="btn icon wa" target="_blank" rel="noopener" data-ce-stop href="' + App.waLink(r.cliente.telefono) + '">' + App.icon("wa") + "</a></div>";
