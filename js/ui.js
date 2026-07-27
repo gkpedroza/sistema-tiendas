@@ -635,15 +635,17 @@ window.App = window.App || {};
   App.textoProducto = function (p) {
     var t = App.tienda(p.tienda);
     var vInfo = App.varInfo(p);
+    var pv = App.calc.precioVenta(p);
+    var enRemate = pv < +p.precio;
     var tallasCon = p.tallas && p.tallas.length
       ? p.tallas.filter(function (x) { return +x.stock > 0; }).map(function (x) { return x.talla; }).join(", ")
       : "";
     var txt = App.db.settings.plantillaWhatsApp || "";
     return txt
-      .replace(/{{producto}}/g, p.nombre)
+      .replace(/{{producto}}/g, p.nombre + (enRemate ? " 🔻 EN REMATE" : ""))
       .replace(/{{descripcion}}/g, p.descripcion || "")
-      .replace(/{{precio_usd}}/g, nfUsd.format(p.precio))
-      .replace(/{{precio_bs}}/g, nfBs.format(Math.round(App.calc.bsDe(p.precio))))
+      .replace(/{{precio_usd}}/g, nfUsd.format(pv) + (enRemate ? " (antes ~$" + nfUsd.format(p.precio) + "~)" : ""))
+      .replace(/{{precio_bs}}/g, nfBs.format(Math.round(App.calc.bsDe(pv))))
       .replace(/{{tallas_linea}}/g, tallasCon ? vInfo.emoji + " " + vInfo.p + " disponibles: " + tallasCon + "\n" : "")
       .replace(/{{tallas}}/g, tallasCon || "única")
       .replace(/{{tienda}}/g, t ? t.nombre : "")

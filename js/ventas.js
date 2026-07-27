@@ -490,6 +490,7 @@ window.App = window.App || {};
     var NV = orig ? {
       clienteId: orig.clienteId, casual: false,
       items: JSON.parse(JSON.stringify(orig.items)),
+      descuento: +orig.descuento || 0,
       promoId: orig.promoId,
       canal: orig.canal,
       vendedorId: orig.vendedorId,
@@ -532,13 +533,15 @@ window.App = window.App || {};
     });
 
     var totalNV = function () {
-      return NV.items.reduce(function (t, i) { return t + i.cant * i.precioUnit; }, 0);
+      var t = NV.items.reduce(function (s, i) { return s + i.cant * i.precioUnit; }, 0);
+      return Math.max(0, t - (+NV.descuento || 0));
     };
 
     function pintarTotal() {
       var t = totalNV();
       var bsUsd = bsUsdNV();
       var html = "<b style='font-size:16px'>" + App.fmt.usd(t) + "</b>";
+      if ((+NV.descuento || 0) > 0) html += '<div class="small muted num">incluye descuento -' + App.fmt.usd(NV.descuento) + "</div>";
       if (bsUsd > 0) html += '<div class="small muted num">' + (bsUsd < t ? "parte en Bs: " : "") + App.fmt.bs(bsUsd * NV.tasaEur) + "</div>";
       if (NV.entrega && NV.entrega.tipo === "motorizado" && (NV.entrega.cobroEnvio || 0) > 0) {
         html += '<div class="small muted num">+ delivery ' + App.fmt.usd(NV.entrega.cobroEnvio) + " (aparte)</div>";
@@ -555,6 +558,14 @@ window.App = window.App || {};
         html += '<div class="row-item static"><div class="avatar">' + App.iniciales(cli.nombre) + "</div>" +
           '<div class="row-main"><div class="row-title">' + App.esc(cli.nombre) + '</div><div class="row-sub">' + App.esc((cli.ciudad || "") + (cli.estado ? ", " + cli.estado : "")) + "</div></div>" +
           '<button class="btn icon" data-quitar-cli>' + App.icon("x") + "</button></div>";
+        /* nivel de fidelidad: se ofrece su descuento con un toque (nunca se aplica solo) */
+        var nivCli = App.calc.nivelCliente(cli.id);
+        if (nivCli && +nivCli.descuentoPct > 0) {
+          html += (+NV.descuento || 0) > 0
+            ? '<div class="small muted" style="margin-top:6px">' + nivCli.emoji + " Descuento " + App.esc(nivCli.nombre) + " aplicado: -" + App.fmt.usd(NV.descuento) + ' <button class="btn sm ghost" data-quitar-desc>Quitar</button></div>'
+            : '<div class="alert-item" style="margin-top:6px"><span>' + nivCli.emoji + " Cliente <b>" + App.esc(nivCli.nombre) + "</b>: tiene " + nivCli.descuentoPct + "% de descuento</span>" +
+            '<button class="btn sm primary" data-desc-nivel="' + nivCli.descuentoPct + '">Aplicar</button></div>';
+        }
       } else {
         html += '<div class="search-bar">' + App.icon("buscar") + '<input class="input" id="nv-bus-cli" placeholder="Buscar cliente… (o deja vacío para venta casual)"></div>' +
           '<div class="list" id="nv-res-cli"></div>';
@@ -580,7 +591,17 @@ window.App = window.App || {};
         });
       }
       var quitar = App.$("[data-quitar-cli]", box);
-      if (quitar) quitar.addEventListener("click", function () { NV.clienteId = null; pintarCliente(); });
+      if (quitar) quitar.addEventListener("click", function () { NV.clienteId = null; NV.descuento = 0; pintarCliente(); pintarTotal(); });
+      var bDesc = App.$("[data-desc-nivel]", box);
+      if (bDesc) bDesc.addEventListener("click", function () {
+        var sub = NV.items.reduce(function (s, i) { return s + i.cant * i.precioUnit; }, 0);
+        if (!sub) { App.toast("Agrega primero los productos y después aplica el descuento", "err"); return; }
+        NV.descuento = Math.round(sub * (+bDesc.dataset.descNivel / 100) * 100) / 100;
+        App.toast("Descuento aplicado: -" + App.fmt.usd(NV.descuento));
+        pintarCliente(); pintarTotal();
+      });
+      var qDesc = App.$("[data-quitar-desc]", box);
+      if (qDesc) qDesc.addEventListener("click", function () { NV.descuento = 0; pintarCliente(); pintarTotal(); });
       App.$("[data-nuevo-cli]", box).addEventListener("click", function () {
         App.clienteRapido(function (id) { NV.clienteId = id; pintarCliente(); });
       });
@@ -640,7 +661,7 @@ window.App = window.App || {};
         if (ya) { ya.cant++; }
         else {
           var tallaIni = p.tallas && p.tallas.length ? (p.tallas.filter(function (t) { return +t.stock > 0; })[0] || p.tallas[0]).talla : null;
-          NV.items.push({ productoId: p.id, nombre: p.nombre, cant: 1, precioUnit: p.precio, precioLista: p.precio, talla: tallaIni });
+          NV.items.push({ productoId: p.id, nombre: p.nombre, cant: 1, precioUnit: App.calc.precioVenta(p), precioLista: App.calc.precioVenta(p), talla: tallaIni });
         }
         pintarItems(); pintarTotal();
       }
@@ -959,7 +980,7 @@ window.App = window.App || {};
         id: orig ? orig.id : App.uid("v"),
         fecha: NV.fecha + "T" + horaV,
         canal: NV.canal, clienteId: NV.clienteId, vendedorId: NV.vendedorId,
-        items: NV.items, promoId: NV.promoId, descuento: 0,
+        items: NV.items, promoId: NV.promoId, descuento: +NV.descuento || 0,
         metodoPago: pagos ? pagos.map(function (p) { return p.metodo; }).join(" + ") : NV.metodoPago,
         pagos: pagos, totalUsd: total,
         tasaEur: bsUsd > 0 ? NV.tasaEur : null,

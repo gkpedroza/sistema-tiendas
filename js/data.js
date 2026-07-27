@@ -887,6 +887,40 @@ window.App = window.App || {};
     });
     return m;
   };
+  /* precio vigente: si el producto está en remate, manda el precio de remate */
+  C.precioVenta = function (p) {
+    return p && p.remate && p.remate.activo && +p.remate.precioUsd > 0 ? +p.remate.precioUsd : +((p && p.precio) || 0);
+  };
+
+  /* nivel de fidelidad: el más alto cuyo mínimo cumpla (por compras O por gasto neto) */
+  C.nivelesConf = function () {
+    return (App.db.settings && App.db.settings.niveles) || DEFAULTS_SETTINGS.niveles;
+  };
+  C.nivelCliente = function (clienteId, statsOpc) {
+    var st = statsOpc || C.clientesStats()[clienteId];
+    if (!st) return null;
+    var mejor = null;
+    C.nivelesConf().forEach(function (n) {
+      var porCompras = (+n.minCompras || 0) > 0 && st.compras >= +n.minCompras;
+      var porGasto = (+n.minUsd || 0) > 0 && st.total >= +n.minUsd;
+      if (porCompras || porGasto) mejor = n;
+    });
+    return mejor;
+  };
+
+  /* devoluciones acumuladas de un cliente (para verlas en su ficha) */
+  C.devolucionesDe = function (clienteId) {
+    var r = { veces: 0, montoUsd: 0 };
+    App.db.ventas.forEach(function (v) {
+      if (v.clienteId !== clienteId) return;
+      (v.devoluciones || []).forEach(function (d) {
+        r.veces++;
+        r.montoUsd += +d.montoUsd || 0;
+      });
+    });
+    return r;
+  };
+
   C.clienteEstrella = function () {
     var stats = C.clientesStats(), best = null, bestId = null;
     Object.keys(stats).forEach(function (id) {
@@ -1137,6 +1171,12 @@ window.App = window.App || {};
     metodosPago: ["Zelle", "Efectivo USD", "Bolívares", "Zinli", "Binance USDT"],
     categorias: ["Juguetes", "Disfraces", "Peluches", "Tecnología", "Hogar", "Cuidado personal", "Accesorios", "Escolar"],
     categoriasGasto: ["Ads Instagram", "Papelería y etiquetas", "Empaques", "Transporte y envíos", "Servicios", "Comisiones", "Otros"],
+    /* niveles de fidelidad: se gana el más alto cuyo mínimo se cumpla (compras O gasto neto) */
+    niveles: [
+      { id: "frecuente", nombre: "Frecuente", emoji: "💗", minCompras: 3, minUsd: 100, descuentoPct: 0 },
+      { id: "vip", nombre: "VIP", emoji: "💎", minCompras: 6, minUsd: 300, descuentoPct: 5 },
+      { id: "estrella", nombre: "Estrella", emoji: "👑", minCompras: 10, minUsd: 600, descuentoPct: 10 }
+    ],
     agencias: [
       { id: "ag1", nombre: "MRW" }, { id: "ag2", nombre: "Zoom" }, { id: "ag3", nombre: "Tealca" },
       { id: "ag4", nombre: "Domesa" }, { id: "ag5", nombre: "Liberty Express" }
@@ -1150,7 +1190,7 @@ window.App = window.App || {};
 
   /* mapeo colección local ↔ tabla nube (camelCase ↔ snake_case) */
   var NUBE_TABLAS = {
-    productos: { tabla: "productos", campos: { sku: "sku", codigoBarras: "codigo_barras", nombre: "nombre", emoji: "emoji", tienda: "tienda", categoria: "categoria", genero: "genero", descripcion: "descripcion", tallas: "tallas", tipoVariante: "tipo_variante", stock: "stock", stockMin: "stock_min", costoChina: "costo_china", flete: "flete", costoAds: "costo_ads", presupuestoAds: "presupuesto_ads", precio: "precio", fotos: "fotos", creadoEl: "creado_el" } },
+    productos: { tabla: "productos", campos: { sku: "sku", codigoBarras: "codigo_barras", nombre: "nombre", emoji: "emoji", tienda: "tienda", categoria: "categoria", genero: "genero", descripcion: "descripcion", tallas: "tallas", tipoVariante: "tipo_variante", stock: "stock", stockMin: "stock_min", costoChina: "costo_china", flete: "flete", costoAds: "costo_ads", presupuestoAds: "presupuesto_ads", precio: "precio", remate: "remate", fotos: "fotos", creadoEl: "creado_el" } },
     clientes: { tabla: "clientes", campos: { nombre: "nombre", telefono: "telefono", email: "email", estado: "estado", ciudad: "ciudad", direccion: "direccion", notas: "notas", creadoEl: "creado_el" } },
     ventas: { tabla: "ventas", ts: { fecha: "T" }, campos: { fecha: "fecha", canal: "canal", clienteId: "cliente_id", vendedorId: "vendedor_id", items: "items", promoId: "promo_id", descuento: "descuento", metodoPago: "metodo_pago", pagos: "pagos", totalUsd: "total_usd", tasaEur: "tasa_eur", tasaUsd: "tasa_usd", totalBs: "total_bs", estadoPago: "estado_pago", apartado: "apartado", abonos: "abonos", devoluciones: "devoluciones", entrega: "entrega", notas: "notas" } },
     motorizados: { tabla: "motorizados", campos: { nombre: "nombre", telefono: "telefono" } },

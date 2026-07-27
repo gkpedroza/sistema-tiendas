@@ -131,6 +131,21 @@ window.App = window.App || {};
         });
         html += '<button class="btn sm primary" id="aj-guardar-tiendas">Guardar tiendas</button></div>';
 
+        /* niveles de fidelidad de clientes */
+        var nivelesConf = s.niveles || App.calc.nivelesConf();
+        html += '<div class="card section-gap"><div class="card-head"><h2>🏆 Niveles de clientes</h2></div>' +
+          '<p class="small muted">El cliente gana el nivel más alto cuyo mínimo cumpla (por N compras O por USD gastados, lo que llegue primero). Su descuento se ofrece al venderle con un botón; nunca se aplica solo.</p>';
+        nivelesConf.forEach(function (n, i) {
+          html += '<div class="form-grid" style="margin-bottom:8px">' +
+            '<div class="field"><label>Emoji + nombre del nivel</label><div class="flex">' +
+            '<input class="input" data-niv-emoji="' + i + '" value="' + App.esc(n.emoji) + '" maxlength="4" style="width:58px;flex:none">' +
+            '<input class="input" data-niv-nombre="' + i + '" value="' + App.esc(n.nombre) + '"></div></div>' +
+            '<div class="field"><label>Descuento %</label><input class="input num" data-niv-desc="' + i + '" type="number" min="0" max="90" value="' + (+n.descuentoPct || 0) + '"></div>' +
+            '<div class="field"><label>Desde N compras</label><input class="input num" data-niv-comp="' + i + '" type="number" min="0" value="' + (+n.minCompras || 0) + '"></div>' +
+            '<div class="field"><label>o desde USD gastados</label><input class="input num" data-niv-usd="' + i + '" type="number" min="0" value="' + (+n.minUsd || 0) + '"></div></div>';
+        });
+        html += '<button class="btn sm primary" id="aj-guardar-niveles">Guardar niveles</button></div>';
+
         /* plantilla WhatsApp */
         var prodDemo = App.db.productos[0];
         html += '<div class="card section-gap"><div class="card-head"><h2>💬 Plantilla de WhatsApp</h2></div>' +
@@ -377,6 +392,20 @@ window.App = window.App || {};
             t.corto = App.$("[data-t-corto='" + i + "']").value.trim() || t.corto;
           });
           App.save(); App.toast("Tiendas actualizadas"); App.montarShell();
+        });
+        App.$("#aj-guardar-niveles").addEventListener("click", function () {
+          var base = s.niveles || App.calc.nivelesConf();
+          s.niveles = base.map(function (n, i) {
+            return {
+              id: n.id,
+              emoji: App.$('[data-niv-emoji="' + i + '"]', el).value.trim() || n.emoji,
+              nombre: App.$('[data-niv-nombre="' + i + '"]', el).value.trim() || n.nombre,
+              descuentoPct: Math.max(0, parseFloat(App.$('[data-niv-desc="' + i + '"]', el).value) || 0),
+              minCompras: Math.max(0, parseInt(App.$('[data-niv-comp="' + i + '"]', el).value, 10) || 0),
+              minUsd: Math.max(0, parseFloat(App.$('[data-niv-usd="' + i + '"]', el).value) || 0)
+            };
+          });
+          App.save(); App.toast("Niveles guardados 🏆");
         });
         App.$("#aj-guardar-plantilla").addEventListener("click", function () {
           s.plantillaWhatsApp = App.$("#aj-plantilla").value;

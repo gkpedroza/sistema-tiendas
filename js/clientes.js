@@ -181,9 +181,11 @@ window.App = window.App || {};
         if (!lista.length) h2 = '<div class="empty"><div class="big">👥</div><p>Sin resultados.</p></div>';
         lista.forEach(function (c) {
           var st = stats[c.id];
+          var niv = st ? App.calc.nivelCliente(c.id, st) : null;
           h2 += '<div class="row-item" data-cli-ir="' + c.id + '">' +
             '<div class="avatar">' + App.iniciales(c.nombre) + "</div>" +
             '<div class="row-main"><div class="row-title">' + App.esc(c.nombre) +
+            (niv ? " " + niv.emoji : "") +
             (estrella && estrella.cliente.id === c.id ? ' <span class="star">⭐</span>' : "") + "</div>" +
             '<div class="row-sub">' + App.esc((c.ciudad || "-") + (c.estado ? ", " + c.estado : "")) +
             (st ? " · " + st.compras + " compra" + (st.compras > 1 ? "s" : "") : " · sin compras aún") + "</div></div>" +
@@ -285,8 +287,12 @@ window.App = window.App || {};
     var compras = App.db.ventas.filter(function (v) { return v.clienteId === c.id; })
       .sort(function (a, b) { return a.fecha > b.fecha ? -1 : 1; });
 
+    var nivel = st ? C.nivelCliente(c.id, st) : null;
+    var dev = C.devolucionesDe(c.id);
+
     var cuerpo = '<div class="flex" style="gap:12px"><div class="avatar lg">' + App.iniciales(c.nombre) + "</div>" +
-      '<div style="flex:1;min-width:0"><div class="row-title" style="font-size:16px">' + App.esc(c.nombre) + "</div>" +
+      '<div style="flex:1;min-width:0"><div class="row-title" style="font-size:16px">' + App.esc(c.nombre) +
+      (nivel ? ' <span class="pill tint">' + nivel.emoji + " " + App.esc(nivel.nombre) + (+nivel.descuentoPct > 0 ? " · " + nivel.descuentoPct + "%" : "") + "</span>" : "") + "</div>" +
       '<div class="row-sub">' + App.esc((c.ciudad || "") + (c.estado ? ", " + c.estado : "")) + (c.direccion ? " · " + App.esc(c.direccion) : "") + "</div>" +
       '<div class="row-sub">Cliente desde ' + App.fmt.fecha(c.creadoEl) + "</div></div></div>";
 
@@ -300,6 +306,11 @@ window.App = window.App || {};
         '<div class="kpi" data-scroll-hist style="padding:10px 12px 8px;cursor:pointer"><div class="kpi-label">Total</div><div class="kpi-value" style="font-size:clamp(14px,4.5vw,19px)">' + App.fmt.usd0(st.total) + "</div></div>" +
         '<div class="kpi" data-scroll-hist style="padding:10px 12px 8px;cursor:pointer"><div class="kpi-label">Compras</div><div class="kpi-value" style="font-size:clamp(14px,4.5vw,19px)">' + st.compras + "</div></div>" +
         '<div class="kpi" data-scroll-hist style="padding:10px 12px 8px;cursor:pointer"><div class="kpi-label">Última</div><div class="kpi-value" style="font-size:clamp(13px,4vw,15px)">' + App.fmt.fechaRel(st.ultima) + "</div></div></div>";
+
+      if (dev.veces) {
+        cuerpo += '<div class="alert-item" style="margin-top:6px"><span>↩️ Ha tenido <b>' + dev.veces + "</b> devolución" + (dev.veces > 1 ? "es" : "") +
+          " por <b>" + App.fmt.usd(dev.montoUsd) + "</b> en total. Tenlo presente al venderle.</span></div>";
+      }
 
       var favoritos = Object.keys(st.productos).map(function (pid) {
         var p = App.prod(pid);
@@ -315,7 +326,8 @@ window.App = window.App || {};
     if (compras.length) {
       cuerpo += "<h3 style='margin-top:6px' id='dc-todas'>🧾 Todas sus compras (" + compras.length + ")</h3><div class='list'>" + compras.map(function (v) {
         return '<div class="row-item" data-hv="' + v.id + '"><div class="row-main"><div class="row-title" style="font-size:13px">' +
-          App.esc(v.items.map(function (i) { return i.cant + "× " + i.nombre; }).join(", ")) + "</div>" +
+          App.esc(v.items.map(function (i) { return i.cant + "× " + i.nombre; }).join(", ")) +
+          ((v.devoluciones || []).length ? ' <span class="pill warn">↩️ devolución</span>' : "") + "</div>" +
           '<div class="row-sub">' + App.fmt.fecha(v.fecha.slice(0, 10)) + " · " + App.esc(v.canal) + " · " + App.esc(v.metodoPago) + "</div></div>" +
           '<span class="num small" style="font-weight:700">' + App.fmt.usd(App.calc.ventaTotal(v)) + "</span>" + App.icon("chevR") + "</div>";
       }).join("") + "</div>" +

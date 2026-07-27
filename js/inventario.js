@@ -85,7 +85,9 @@ window.App = window.App || {};
             '<span class="pill stock-pill ' + stockCls + '">' + stock + " uds</span>" +
             "</div>" +
             '<div class="prod-body"><div class="prod-name">' + App.esc(p.nombre) + "</div>" +
-            '<div class="prod-price num">' + App.fmt.usd(p.precio) + "</div>" +
+            (C.precioVenta(p) < +p.precio
+              ? '<div class="prod-price num">🔻 ' + App.fmt.usd(C.precioVenta(p)) + ' <span class="small muted" style="text-decoration:line-through;font-weight:400">' + App.fmt.usd(p.precio) + "</span></div>"
+              : '<div class="prod-price num">' + App.fmt.usd(p.precio) + "</div>") +
             '<div class="prod-meta"><span>' + App.esc(p.categoria) + "</span>" +
             (esSuper ? '<span class="num">' + Math.round(margen * 100) + "% mg</span>" : "") + "</div></div></div>";
         });
@@ -264,8 +266,13 @@ window.App = window.App || {};
       (p.genero && p.genero !== "unisex" ? '<span class="pill">' + App.esc(p.genero) + "</span>" : "") +
       (p.sku ? '<span class="pill num">' + App.esc(p.sku) + "</span>" : "") + "</div>";
 
-    cuerpo += '<div class="spread"><div class="prod-price num" style="font-size:22px">' + App.fmt.usd(p.precio) +
-      '</div><div class="small muted num">' + App.fmt.bs(C.bsDe(p.precio)) + " (tasa € hoy)</div></div>";
+    var precioV = C.precioVenta(p);
+    cuerpo += '<div class="spread"><div class="prod-price num" style="font-size:22px">' +
+      (precioV < +p.precio ? "🔻 " + App.fmt.usd(precioV) + ' <span class="small muted" style="text-decoration:line-through;font-weight:400">' + App.fmt.usd(p.precio) + "</span>" : App.fmt.usd(p.precio)) +
+      '</div><div class="small muted num">' + App.fmt.bs(C.bsDe(precioV)) + " (tasa € hoy)</div></div>";
+    if (precioV < +p.precio) {
+      cuerpo += '<div class="alert-item"><span>🔻 <b>En remate</b>' + (p.remate && p.remate.motivo ? ": " + App.esc(p.remate.motivo) : "") + " · se vende y se publica al precio rebajado</span></div>";
+    }
     if (p.descripcion) cuerpo += '<p class="small muted texto-largo">' + App.esc(p.descripcion) + "</p>";
 
     /* stock: solo lectura (se ajusta desde el lápiz ✏️ para evitar toques accidentales) */
@@ -425,6 +432,13 @@ window.App = window.App || {};
         '<div class="field" id="fp-stock-wrap"><label>Stock</label><input class="input num" id="fp-stock" type="number" min="0" value="' + (FP.stock || 0) + '"></div>' +
         '<div class="field"><label>Alerta de stock (mínimo)</label><input class="input num" id="fp-stockmin" type="number" min="0" value="' + (FP.stockMin || 0) + '"></div></div>' +
         (App.auth.esSuper()
+          ? '<hr class="divider"><div class="spread"><h3>🔻 Remate</h3><label class="flex small muted">En remate <span class="switch"><input type="checkbox" id="fp-remate-on"' + (FP.remate && FP.remate.activo ? " checked" : "") + "><i></i></span></label></div>" +
+          '<div id="fp-remate-box" class="' + (FP.remate && FP.remate.activo ? "" : "hidden") + '"><div class="form-grid">' +
+          '<div class="field"><label>Precio de remate (USD)</label><input class="input num" id="fp-remate-precio" type="number" step="0.01" min="0" value="' + ((FP.remate && FP.remate.precioUsd) || "") + '"></div>' +
+          '<div class="field"><label>Motivo (opcional)</label><input class="input" id="fp-remate-motivo" placeholder="Caja dañada, último disponible…" value="' + App.esc((FP.remate && FP.remate.motivo) || "") + '"></div></div>' +
+          '<div class="small muted">Mientras esté activo, el producto se vende y se publica a este precio (el normal sale tachado). Al venderse, apágalo aquí mismo.</div></div>'
+          : "") +
+        (App.auth.esSuper()
           ? '<hr class="divider"><h3>💰 Costos (solo tú los ves)</h3>' +
           '<p class="small muted">Los tres primeros son <b>por cada unidad</b>: lo que te cuesta UNA pieza puesta en Venezuela.</p>' +
           '<div class="form-grid" style="margin-top:8px">' +
@@ -503,6 +517,10 @@ window.App = window.App || {};
       if (conTallas && (!FP.tallas || !FP.tallas.length)) FP.tallas = [{ talla: "", stock: 0 }];
       pintarTallas();
     });
+    var swRemate = App.$("#fp-remate-on", s.el);
+    if (swRemate) swRemate.addEventListener("change", function (e) {
+      App.$("#fp-remate-box", s.el).classList.toggle("hidden", !e.target.checked);
+    });
 
     function pintarMargen() {
       var box = App.$("#fp-margen", s.el);
@@ -564,6 +582,15 @@ window.App = window.App || {};
         FP.stock = parseInt(App.$("#fp-stock", s.el).value, 10) || 0;
       }
       if (App.auth.esSuper()) {
+        var remOn = App.$("#fp-remate-on", s.el).checked;
+        if (remOn) {
+          var remPrecio = parseFloat(App.$("#fp-remate-precio", s.el).value) || 0;
+          if (remPrecio <= 0) { App.toast("Indica el precio de remate (o apaga el remate)", "err"); return; }
+          if (remPrecio >= precio) { App.toast("El remate debe ser MENOR que el precio normal (" + App.fmt.usd(precio) + ")", "err"); return; }
+          FP.remate = { activo: true, precioUsd: remPrecio, motivo: App.$("#fp-remate-motivo", s.el).value.trim(), desde: App.hoyISO() };
+        } else {
+          FP.remate = null;
+        }
         FP.costoChina = parseFloat(App.$("#fp-china", s.el).value) || 0;
         FP.flete = parseFloat(App.$("#fp-flete", s.el).value) || 0;
         FP.costoAds = parseFloat((App.$("#fp-ads", s.el) || {}).value) || 0;
