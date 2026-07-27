@@ -194,9 +194,7 @@ window.App = window.App || {};
     if (avisos[key]) return;
     avisos[key] = 1;
     localStorage.setItem("ljt_avisos", JSON.stringify(avisos));
-    if (window.Notification && Notification.permission === "granted") {
-      try { new Notification(titulo, { body: cuerpo }); } catch (e2) { }
-    }
+    App.notificarSistema(titulo, cuerpo);
     App.toast(titulo + " - " + cuerpo);
   }
   function chequearRecordatorios() {
@@ -223,11 +221,34 @@ window.App = window.App || {};
     });
   }
   App.pedirPermisoNotif = function () {
+    /* iPhone: el permiso solo existe dentro de la app instalada en la pantalla de inicio */
+    var esiOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    if (esiOS && !navigator.standalone) {
+      App.toast("En iPhone: instala primero la app (Compartir → Añadir a pantalla de inicio) y activa las notificaciones desde adentro", "err");
+      return;
+    }
     if (!window.Notification) { App.toast("Este navegador no soporta notificaciones", "err"); return; }
     Notification.requestPermission().then(function (p) {
-      if (p === "granted") App.toast("Notificaciones del navegador activadas 🔔");
-      else App.toast("Permiso no concedido - seguirás viendo avisos dentro de la app", "err");
+      if (p === "granted") {
+        App.toast("Notificaciones activadas 🔔");
+        App.notificarSistema("🔔 Notificaciones activas", "Así se verán los avisos de retiros y pedidos.");
+      } else App.toast("Permiso no concedido - seguirás viendo avisos dentro de la app", "err");
     });
+  };
+
+  /* notificación del sistema: en la PWA (iPhone/Android) va por el service worker;
+     en navegador de escritorio, por la API clásica */
+  App.notificarSistema = function (titulo, cuerpo) {
+    if (!window.Notification || Notification.permission !== "granted") return;
+    var opciones = { body: cuerpo, icon: "icon-192.png", badge: "icon-192.png" };
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then(function (reg) {
+        if (reg && reg.showNotification) reg.showNotification(titulo, opciones);
+        else { try { new Notification(titulo, opciones); } catch (e) { } }
+      }).catch(function () { try { new Notification(titulo, opciones); } catch (e) { } });
+    } else {
+      try { new Notification(titulo, opciones); } catch (e) { }
+    }
   };
 
   App.iniciarApp = function () {
@@ -261,6 +282,32 @@ window.App = window.App || {};
       navigator.serviceWorker.register("sw.js").catch(function () { });
     }
     window.addEventListener("hashchange", rutear);
+
+    /* la app instalada avisa cuando hay versión nueva publicada (revisa al volver
+       al frente y cada 15 min; el botón recarga y trae todo fresco) */
+    (function vigilarVersion() {
+      var sc = document.querySelector('script[src*="?v="]');
+      var miV = sc ? (sc.src.match(/\?v=(\d{8,})/) || [])[1] : null;
+      if (!miV || location.protocol.indexOf("http") !== 0) return;
+      function avisar() {
+        if (document.getElementById("banner-act")) return;
+        var b = document.createElement("button");
+        b.id = "banner-act";
+        b.className = "btn primary";
+        b.style.cssText = "position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:400;box-shadow:var(--shadow-2)";
+        b.textContent = "⬆️ Versión nueva - toca para actualizar";
+        b.addEventListener("click", function () { location.reload(); });
+        document.body.appendChild(b);
+      }
+      function chequear() {
+        fetch("index.html", { cache: "no-store" }).then(function (r) { return r.text(); }).then(function (html) {
+          var v = (html.match(/\?v=(\d{8,})/) || [])[1];
+          if (v && v !== miV) avisar();
+        }).catch(function () { });
+      }
+      setInterval(chequear, 15 * 60000);
+      document.addEventListener("visibilitychange", function () { if (!document.hidden) chequear(); });
+    })();
 
     /* iOS: con el teclado abierto los elementos fijos quedan "guindando" a media
        pantalla. Mientras se escribe se esconde el dock; al cerrar el teclado, un
